@@ -1,5 +1,4 @@
-import 'package:cert_classroom_mobile/features/auth/data/models/auth_user.dart';
-
+import 'models/profile.dart';
 import 'profile_api.dart';
 
 class ProfileRepository {
@@ -7,5 +6,33 @@ class ProfileRepository {
 
   final ProfileApi _api;
 
-  Future<AuthUser> fetchProfile() => _api.fetchCurrentUser();
+  Future<Profile> fetchProfile() async {
+    final json = await _api.fetchProfile();
+    final user = json['user'] as Map<String, dynamic>? ?? const {};
+    final student = json['student'] as Map<String, dynamic>? ?? const {};
+    final merged = {
+      ...student,
+      ...user,
+      'full_name': user['full_name'] ?? student['full_name'],
+      'email': user['email'],
+      'phone': user['phone'],
+      'date_of_birth': student['date_of_birth'] ?? user['date_of_birth'],
+    };
+    return Profile.fromJson(merged);
+  }
+
+  Future<Profile> updateProfile(ProfileUpdateInput input) async {
+    final json = await _api.updateProfile(input.toJson());
+    final user = json['user'] as Map<String, dynamic>? ?? const {};
+    final student = json['student'] as Map<String, dynamic>? ?? const {};
+    final merged = {
+      ...student,
+      ...user,
+      'full_name': user['full_name'] ?? student['full_name'],
+      'email': user['email'],
+      'phone': user['phone'],
+      'date_of_birth': student['date_of_birth'] ?? user['date_of_birth'],
+    };
+    return Profile.fromJson(merged);
+  }
 }

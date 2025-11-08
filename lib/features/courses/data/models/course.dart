@@ -1,65 +1,169 @@
-class Course {
-  const Course({
+class CourseSummary {
+  const CourseSummary({
     required this.id,
     required this.title,
-    required this.description,
-    required this.category,
-    required this.lessons,
-    required this.durationInHours,
-    required this.rating,
-    required this.progress,
-    required this.thumbnail,
-    this.isEnrolled = false,
+    this.slug,
+    this.coverImage,
+    this.shortDescription,
+    this.price,
+    this.lessonsCount,
+    this.teacherName,
+    this.categoryName,
   });
 
-  final String id;
+  final int id;
   final String title;
-  final String description;
-  final String category;
-  final int lessons;
-  final double durationInHours;
-  final double rating;
-  final double progress;
-  final String thumbnail;
-  final bool isEnrolled;
+  final String? slug;
+  final String? coverImage;
+  final String? shortDescription;
+  final CoursePrice? price;
+  final int? lessonsCount;
+  final String? teacherName;
+  final String? categoryName;
 
-  static List<Course> sample() => [
-    const Course(
-      id: 'flutter-cert',
-      title: 'Flutter Mobile Certification',
-      description: 'Xay dung app Flutter gan voi giao dien web Student.',
-      category: 'Mobile',
-      lessons: 24,
-      durationInHours: 18.0,
-      rating: 4.9,
-      progress: 35.0,
-      thumbnail:
-          'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400',
-    ),
-    const Course(
-      id: 'laravel-api',
-      title: 'Laravel API Mastery',
-      description: 'Thiet ke backend RESTful bang Laravel 10.',
-      category: 'Backend',
-      lessons: 30,
-      durationInHours: 22.0,
-      rating: 4.8,
-      progress: 70.0,
-      thumbnail:
-          'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400',
-      isEnrolled: true,
-    ),
-    const Course(
-      id: 'ui-ux',
-      title: 'UI/UX Foundations',
-      description: 'Nguyen tac thiet ke trai nghiem nguoi dung hien dai.',
-      category: 'Design',
-      lessons: 18,
-      durationInHours: 12.0,
-      rating: 4.7,
-      progress: 0.0,
-      thumbnail:
-          'https://images.unsplash.com/photo-1522199710521-72d69614c702?w=400',
-    ),
-  ];
+  factory CourseSummary.fromJson(Map<String, dynamic> json) {
+    final priceJson = json['price'];
+    return CourseSummary(
+      id: _parseInt(json['id']),
+      title: json['title']?.toString() ?? 'Khoa hoc',
+      slug: json['slug']?.toString(),
+      coverImage:
+          json['cover_image']?.toString() ??
+          json['thumbnail']?.toString() ??
+          json['image']?.toString(),
+      shortDescription: json['short_description']?.toString(),
+      price:
+          priceJson is Map<String, dynamic> ? CoursePrice.fromJson(priceJson) : null,
+      lessonsCount: _parseInt(json['lessons_count']),
+      teacherName: json['teacher']?['name']?.toString(),
+      categoryName: json['category']?['name']?.toString(),
+    );
+  }
+}
+
+class CourseDetail {
+  const CourseDetail({
+    required this.id,
+    required this.title,
+    this.description,
+    this.coverImage,
+    this.price,
+    this.categoryName,
+    this.teacherName,
+    this.chapters = const [],
+  });
+
+  final int id;
+  final String title;
+  final String? description;
+  final String? coverImage;
+  final CoursePrice? price;
+  final String? categoryName;
+  final String? teacherName;
+  final List<CourseChapter> chapters;
+
+  factory CourseDetail.fromJson(Map<String, dynamic> json) {
+    return CourseDetail(
+      id: _parseInt(json['id']),
+      title: json['title']?.toString() ?? 'Khoa hoc',
+      description: json['description']?.toString(),
+      coverImage:
+          json['cover_image']?.toString() ??
+          json['thumbnail']?.toString() ??
+          json['image']?.toString(),
+      price:
+          json['price'] is Map<String, dynamic>
+              ? CoursePrice.fromJson(json['price'] as Map<String, dynamic>)
+              : null,
+      categoryName: json['category']?['name']?.toString(),
+      teacherName: json['teacher']?['name']?.toString(),
+      chapters:
+          (json['chapters'] as List<dynamic>? ?? [])
+              .whereType<Map<String, dynamic>>()
+              .map(CourseChapter.fromJson)
+              .toList(),
+    );
+  }
+}
+
+class CoursePrice {
+  const CoursePrice({this.original, this.sale, this.currency, this.saving});
+
+  final double? original;
+  final double? sale;
+  final String? currency;
+  final double? saving;
+
+  factory CoursePrice.fromJson(Map<String, dynamic> json) {
+    return CoursePrice(
+      original: _parseDouble(json['original']),
+      sale: _parseDouble(json['sale']),
+      currency: json['currency']?.toString(),
+      saving: _parseDouble(json['saving']),
+    );
+  }
+}
+
+class CourseChapter {
+  const CourseChapter({
+    required this.id,
+    required this.title,
+    this.order,
+    this.lessons = const [],
+  });
+
+  final int id;
+  final String title;
+  final int? order;
+  final List<CourseLessonSummary> lessons;
+
+  factory CourseChapter.fromJson(Map<String, dynamic> json) {
+    return CourseChapter(
+      id: _parseInt(json['id']),
+      title: json['title']?.toString() ?? 'Chuong',
+      order: _parseInt(json['order']),
+      lessons:
+          (json['lessons'] as List<dynamic>? ?? [])
+              .whereType<Map<String, dynamic>>()
+              .map(CourseLessonSummary.fromJson)
+              .toList(),
+    );
+  }
+}
+
+class CourseLessonSummary {
+  const CourseLessonSummary({
+    required this.id,
+    required this.title,
+    this.order,
+    this.type,
+  });
+
+  final int id;
+  final String title;
+  final int? order;
+  final String? type;
+
+  factory CourseLessonSummary.fromJson(Map<String, dynamic> json) {
+    return CourseLessonSummary(
+      id: _parseInt(json['id']),
+      title: json['title']?.toString() ?? 'Bai hoc',
+      order: _parseInt(json['order']),
+      type: json['type']?.toString(),
+    );
+  }
+}
+
+int _parseInt(dynamic value) {
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is double) return value.round();
+  return int.tryParse(value.toString()) ?? 0;
+}
+
+double? _parseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  return double.tryParse(value.toString());
 }

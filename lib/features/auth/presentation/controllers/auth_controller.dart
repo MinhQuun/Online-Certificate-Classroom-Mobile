@@ -23,7 +23,7 @@ class AuthController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   Future<bool> bootstrap() async {
-    // _setLoading(true);
+    _setLoading(true);
     _errorMessage = null;
     bool success = false;
     try {
@@ -54,7 +54,7 @@ class AuthController extends ChangeNotifier {
       _user = null;
       _token = null;
     } finally {
-      // _setLoading(false);
+      _setLoading(false);
     }
     return success;
   }
@@ -98,16 +98,12 @@ class AuthController extends ChangeNotifier {
   void _setLoading(bool value) {
     if (_isLoading == value) return;
     _isLoading = value;
-    Future.microtask(() => _notifySafely());
+    _notifySafely();
   }
 
   void _notifySafely() {
-    final phase = SchedulerBinding.instance.schedulerPhase;
-    if (phase == SchedulerPhase.idle ||
-        phase == SchedulerPhase.postFrameCallbacks) {
+    SchedulerBinding.instance.addPostFrameCallback((_) {
       notifyListeners();
-    } else {
-      SchedulerBinding.instance.addPostFrameCallback((_) => notifyListeners());
-    }
+    });
   }
 }

@@ -1,14 +1,25 @@
-import 'package:cert_classroom_mobile/features/auth/data/models/auth_user.dart';
+import 'package:cert_classroom_mobile/core/network/api_client.dart';
 
-/// Placeholder profile endpoint.
 class ProfileApi {
-  Future<AuthUser> fetchCurrentUser() async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    return const AuthUser(
-      id: 'student-01',
-      fullName: 'Sinh vien demo',
-      email: 'student@example.com',
-      avatarUrl: null,
-    );
+  ProfileApi({ApiClient? client}) : _client = client ?? ApiClient();
+
+  final ApiClient _client;
+
+  Future<Map<String, dynamic>> fetchProfile() async {
+    final response = await _client.get('/student/profile');
+    if (response is Map<String, dynamic>) {
+      final data = response['data'];
+      if (data is Map<String, dynamic>) return data;
+    }
+    return const {};
+  }
+
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> body) async {
+    final response = await _client.put('/student/profile', body: body);
+    if (response is Map<String, dynamic>) {
+      final data = response['data'];
+      if (data is Map<String, dynamic>) return data;
+    }
+    return const {};
   }
 }

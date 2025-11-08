@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:cert_classroom_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/pages/splash_page.dart';
-import 'package:cert_classroom_mobile/features/courses/data/models/course.dart';
 import 'package:cert_classroom_mobile/features/courses/presentation/pages/course_detail_page.dart';
 import 'package:cert_classroom_mobile/features/home/presentation/pages/home_page.dart';
 import 'package:cert_classroom_mobile/features/lessons/presentation/pages/lesson_page.dart';
@@ -23,19 +22,16 @@ class AppRouter {
       case home:
         return _build(settings, const HomePage());
       case courseDetail:
-        final course = settings.arguments;
-        return _build(
-          settings,
-          CourseDetailPage(course: course is Course ? course : null),
-        );
+        final args = settings.arguments;
+        final courseArgs = CourseDetailArgs.fromRoute(args);
+        return _build(settings, CourseDetailPage(args: courseArgs));
       case lesson:
         final args = settings.arguments;
-        return _build(
-          settings,
-          LessonPage(
-            args: args is LessonPageArgs ? args : LessonPageArgs.placeholder(),
-          ),
-        );
+        final lessonArgs =
+            args is LessonPageArgs
+                ? args
+                : LessonPageArgs(lessonId: 0, title: 'Bai hoc');
+        return _build(settings, LessonPage(args: lessonArgs));
       default:
         return _build(
           settings,

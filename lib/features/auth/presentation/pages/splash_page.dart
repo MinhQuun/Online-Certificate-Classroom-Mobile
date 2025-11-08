@@ -40,45 +40,57 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.primary),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: Colors.white,
-                child: Text(
-                  'OCC',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
+    return Consumer<AuthController>(
+      builder: (context, auth, child) {
+        if (auth.errorMessage != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showError(auth.errorMessage!);
+          });
+        }
+        return Scaffold(
+          body: Container(
+            decoration: const BoxDecoration(gradient: AppGradients.primary),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      'OCC',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineMedium?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Online Certificate\nClassroom',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  if (auth.isLoading)
+                    const SizedBox(
+                      height: 28,
+                      width: 28,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Online Certificate\nClassroom',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const SizedBox(
-                height: 28,
-                width: 28,
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

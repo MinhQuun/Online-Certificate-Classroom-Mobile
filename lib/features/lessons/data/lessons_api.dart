@@ -1,9 +1,16 @@
-import 'models/lesson.dart';
-import 'models/lesson_progress.dart';
+import 'package:cert_classroom_mobile/core/network/api_client.dart';
 
 class LessonsApi {
-  Future<(List<Lesson>, LessonProgress)> fetchLessons(String courseId) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return (Lesson.sample(courseId), LessonProgress.sample());
+  LessonsApi({ApiClient? client}) : _client = client ?? ApiClient();
+
+  final ApiClient _client;
+
+  Future<Map<String, dynamic>> getLessonDetail(int id) async {
+    final response = await _client.get('/lessons/$id');
+    if (response is Map<String, dynamic>) {
+      final data = response['data'];
+      if (data is Map<String, dynamic>) return data;
+    }
+    return const {};
   }
 }

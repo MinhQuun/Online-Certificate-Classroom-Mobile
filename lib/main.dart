@@ -7,6 +7,7 @@ import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/controllers/auth_controller.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const OnlineCertificateApp());
 }
 
@@ -17,7 +18,9 @@ class OnlineCertificateApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthController>(create: (_) => AuthController()),
+        ChangeNotifierProvider<AuthController>(
+          create: (_) => AuthController(),
+        ),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
