@@ -16,17 +16,28 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuth();
+    });
   }
 
   Future<void> _checkAuth() async {
     final auth = context.read<AuthController>();
-    await auth.bootstrap();
-    await Future.delayed(const Duration(milliseconds: 600));
+    final isAuthenticated = await auth.bootstrap();
     if (!mounted) return;
 
-    final targetRoute = auth.isLoggedIn ? AppRouter.home : AppRouter.login;
+    if (!isAuthenticated && auth.errorMessage != null) {
+      _showError(auth.errorMessage!);
+    }
+
+    final targetRoute = isAuthenticated ? AppRouter.home : AppRouter.login;
     Navigator.of(context).pushReplacementNamed(targetRoute);
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -42,7 +53,7 @@ class _SplashPageState extends State<SplashPage> {
                 radius: 40,
                 backgroundColor: Colors.white,
                 child: Text(
-                  'OC',
+                  'OCC',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,

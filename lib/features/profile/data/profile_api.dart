@@ -6,7 +6,7 @@ class ProfileApi {
     await Future.delayed(const Duration(milliseconds: 400));
     return const AuthUser(
       id: 'student-01',
-      name: 'Sinh vien demo',
+      fullName: 'Sinh vien demo',
       email: 'student@example.com',
       avatarUrl: null,
     );

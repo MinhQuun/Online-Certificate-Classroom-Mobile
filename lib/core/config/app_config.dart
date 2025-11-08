@@ -4,7 +4,9 @@ class AppConfig {
 
   static const String appName = 'Online Certificate Classroom';
 
-  /// Placeholder for the future Laravel API base URL.
-  /// Replace with the production endpoint during the integration phase.
-  static const String apiBaseUrl = 'https://api.placeholder.local';
+  /// Laravel Student API base URL (dev).
+  // static const String baseUrl = 'http://127.0.0.1:8000/api/v1';
+
+  //IP Quân (thư viện)
+  static const String baseUrl = 'http://192.168.64.1:8000/api/v1';
 }

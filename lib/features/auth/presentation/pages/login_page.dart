@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:cert_classroom_mobile/core/routing/app_router.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
+import 'package:cert_classroom_mobile/core/utils/validators.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:cert_classroom_mobile/shared/widgets/app_button.dart';
 import 'package:cert_classroom_mobile/shared/widgets/app_text_field.dart';
@@ -28,12 +29,26 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _onSubmit(AuthController controller) async {
     if (!_formKey.currentState!.validate()) return;
-    await controller.login(
+
+    final success = await controller.login(
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(AppRouter.home);
+
+    if (success) {
+      Navigator.of(context).pushReplacementNamed(AppRouter.home);
+    } else {
+      _showError(
+        controller.errorMessage ?? 'Dang nhap that bai, vui long thu lai.',
+      );
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -67,13 +82,13 @@ class _LoginPageState extends State<LoginPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Xin chao hoc vien!',
+                              'Xin chào học viên!',
                               style: Theme.of(context).textTheme.headlineSmall
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'Dang nhap de tiep tuc kham pha cac khoa hoc chung chi.',
+                              'Đăng nhập để tiếp tục khám phá các khóa học chứng chỉ.',
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(color: AppColors.muted),
                             ),
@@ -83,34 +98,18 @@ class _LoginPageState extends State<LoginPage> {
                               label: 'Email',
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Vui long nhap email';
-                                }
-                                if (!value.contains('@')) {
-                                  return 'Email khong hop le';
-                                }
-                                return null;
-                              },
+                              validator: Validators.email,
                             ),
                             const SizedBox(height: 16),
                             AppTextField(
                               controller: _passwordController,
-                              label: 'Mat khau',
+                              label: 'Mật khẩu',
                               obscureText: true,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Vui long nhap mat khau';
-                                }
-                                if (value.length < 6) {
-                                  return 'It nhat 6 ky tu';
-                                }
-                                return null;
-                              },
+                              validator: Validators.password,
                             ),
                             const SizedBox(height: 24),
                             AppButton(
-                              label: 'Dang nhap',
+                              label: 'Đăng nhập',
                               isLoading: controller.isLoading,
                               onPressed: () => _onSubmit(controller),
                             ),
@@ -121,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
                                     controller.isLoading
                                         ? null
                                         : () => _onSubmit(controller),
-                                child: const Text('Dang nhap nhanh'),
+                                child: const Text('Đăng nhập nhanh'),
                               ),
                             ),
                           ],

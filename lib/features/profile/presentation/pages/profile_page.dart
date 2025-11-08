@@ -15,7 +15,7 @@ class ProfilePage extends StatelessWidget {
         auth.user ??
         const AuthUser(
           id: 'guest',
-          name: 'Ban hoc vien',
+          fullName: 'Ban hoc vien',
           email: 'student@example.com',
         );
 
@@ -24,7 +24,7 @@ class ProfilePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ProfileHeader(name: user.name, email: user.email),
+          _ProfileHeader(fullName: user.fullName, email: user.email),
           const SizedBox(height: 24),
           Text(
             'Thong ke hoc tap',
@@ -107,9 +107,9 @@ class ProfilePage extends StatelessWidget {
 }
 
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({required this.name, required this.email});
+  const _ProfileHeader({required this.fullName, required this.email});
 
-  final String name;
+  final String fullName;
   final String email;
 
   @override
@@ -133,7 +133,7 @@ class _ProfileHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  fullName,
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(color: Colors.white),

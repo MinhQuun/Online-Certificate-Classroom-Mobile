@@ -1,18 +1,59 @@
-import 'models/auth_user.dart';
+import 'package:cert_classroom_mobile/core/network/api_client.dart';
+import 'package:cert_classroom_mobile/core/network/api_exceptions.dart';
 
-/// Placeholder remote data source for the authentication flow.
 class AuthApi {
-  Future<AuthUser> login({
+  AuthApi({ApiClient? client}) : _client = client ?? ApiClient();
+
+  final ApiClient _client;
+
+  Future<Map<String, dynamic>> login({
     required String email,
     required String password,
+    required String deviceName,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 900));
-    return AuthUser(
-      id: 'fake-${DateTime.now().millisecondsSinceEpoch}',
-      name: 'Sinh vien Minh Quan',
-      email: email,
-      avatarUrl:
-          'https://avatars.githubusercontent.com/u/9919?s=280&v=4',
+    final response = await _client.post(
+      '/student/login',
+      body: {
+        'email': email,
+        'password': password,
+        'device_name': deviceName,
+      },
     );
+    return _extractData(response);
+  }
+
+  Future<void> logout() async {
+    final response = await _client.post('/student/logout');
+    _ensureSuccess(response);
+  }
+
+  Future<Map<String, dynamic>> fetchProfile() async {
+    final response = await _client.get('/student/profile');
+    return _extractData(response);
+  }
+
+  Map<String, dynamic> _extractData(dynamic response) {
+    _ensureSuccess(response);
+    if (response is Map<String, dynamic>) {
+      final data = response['data'];
+      if (data is Map<String, dynamic>) {
+        return data;
+      }
+      return <String, dynamic>{};
+    }
+    throw ApiException('Phan hoi khong hop le tu may chu');
+  }
+
+  void _ensureSuccess(dynamic response) {
+    if (response is Map<String, dynamic>) {
+      final status = response['status']?.toString();
+      if (status != null && status != 'success') {
+        final message =
+            response['message']?.toString() ?? 'Yeu cau that bai, thu lai sau.';
+        throw ApiException(message);
+      }
+      return;
+    }
+    throw ApiException('Phan hoi khong hop le tu may chu');
   }
 }

@@ -1,0 +1,20 @@
+Cách chạy project
+
+1. Chạy laravel
+- Ở phía laravel, chạy lệnh: php artisan serve --host=0.0.0.0
+- Đừng ctrl click vào url đó vì không chạy web được đâu
+- Lên trình duyệt gõ: http://127.0.0.1:8000/
+
+2. Kiểm tra ip máy mình lên cmd: ipconfig. Tìm kiếm  IPv4 Address: 192.168.64.1 (VD)
+
+3. Dán ip vừa kiếm tra xong vô lib/core/config/app_config.dart 
+(đừng xóa  mấy cái kia, cứ comment lại thôi, để người sau dùng gỡ comment ra cho tiện)
+
+4. Chạy flutter pub get
+
+5. Chạy flutter run
+
+# Các lệnh flutter
+flutter clean
+flutter pub get
+flutter run
