@@ -16,9 +16,7 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAuth();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAuth());
   }
 
   Future<void> _checkAuth() async {
