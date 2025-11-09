@@ -39,15 +39,15 @@ class _HomePageState extends State<HomePage> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.menu_book_outlined),
-            label: 'Khoa hoc',
+            label: 'Khóa học',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.school_outlined),
-            label: 'Khoa cua toi',
+            label: 'Khóa của tôi',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
-            label: 'Ho so',
+            label: 'Hồ sơ',
           ),
         ],
       ),

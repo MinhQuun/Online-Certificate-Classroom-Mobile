@@ -52,12 +52,12 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Consumer<ProfileController>(
         builder: (context, controller, _) {
           if (controller.isLoading && controller.profile == null) {
-            return const LoadingIndicator(message: 'Dang tai ho so...');
+            return const LoadingIndicator(message: 'Đang tải hồ sơ...');
           }
 
           if (controller.errorMessage != null && controller.profile == null) {
             return ErrorView(
-              title: 'Khong the tai ho so',
+              title: 'Không thể tải hồ sơ',
               message: controller.errorMessage,
               onRetry: controller.loadProfile,
             );
@@ -77,7 +77,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _ProfileHeader(
-                    fullName: profile?.fullName ?? 'Sinh vien',
+                    fullName: profile?.fullName ?? 'Sinh viên',
                     email: profile?.email ?? '',
                   ),
                   const SizedBox(height: 20),
@@ -88,14 +88,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 20),
                   _SectionCard(
-                    title: 'Trang ca nhan',
-                    subtitle: 'Cap nhat thong tin lien he va mat khau',
+                    title: 'Trang cá nhân',
+                    subtitle: 'Cập nhật thông tin liên hệ và mật khẩu',
                     child: _buildProfileForm(controller),
                   ),
                   const SizedBox(height: 20),
                   _SectionCard(
-                    title: 'Tien do hoc tap',
-                    subtitle: 'Theo doi nhung khoa hoc dang hoc',
+                    title: 'Tiến độ học tập',
+                    subtitle: 'Theo dõi những khóa học đang học',
                     child: _ProgressSection(
                       overview: controller.progress,
                       isLoading: controller.isProgressLoading,
@@ -106,27 +106,27 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 20),
                   _SectionCard(
-                    title: 'Ma kich hoat',
-                    subtitle: 'Kich hoat khoa hoc bang ma da mua',
+                    title: 'Mã kích hoạt',
+                    subtitle: 'Kích hoạt khóa học bằng mã đã mua',
                     child: _PortalTile(
                       icon: Icons.qr_code_2,
-                      title: 'Su dung ma kich hoat',
+                      title: 'Sử dụng mã kích hoạt',
                       description:
-                          'Nhap ma de mo khoa hoc ngay tren cong thong tin.',
-                      actionLabel: 'Mo trang kich hoat',
+                          'Nhập mã để mở khóa học ngay trên cổng thông tin.',
+                      actionLabel: 'Mở trang kích hoạt',
                       onTap: () => _openPortal('student/activation-codes'),
                     ),
                   ),
                   const SizedBox(height: 16),
                   _SectionCard(
-                    title: 'Lich su don hang',
-                    subtitle: 'Xem lai cac giao dich da thanh toan',
+                    title: 'Lịch sử đơn hàng',
+                    subtitle: 'Xem lại các giao dịch đã thanh toán',
                     child: _PortalTile(
                       icon: Icons.receipt_long_outlined,
-                      title: 'Theo doi don hang',
+                      title: 'Theo dõi đơn hàng',
                       description:
-                          'Quan ly hoa don va tinh trang thanh toan nhanh chong.',
-                      actionLabel: 'Xem don hang',
+                          'Quản lý hóa đơn và tình trạng thanh toán nhanh chóng.',
+                      actionLabel: 'Xem đơn hàng',
                       onTap: () => _openPortal('student/order-history'),
                     ),
                   ),
@@ -150,11 +150,11 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           TextFormField(
             controller: _fullNameController,
-            decoration: const InputDecoration(labelText: 'Ho va ten'),
+            decoration: const InputDecoration(labelText: 'Họ và tên'),
             validator:
                 (value) =>
                     value == null || value.isEmpty
-                        ? 'Vui long nhap ho ten'
+                        ? 'Vui lòng nhập họ tên'
                         : null,
           ),
           const SizedBox(height: 12),
@@ -163,14 +163,14 @@ class _ProfilePageState extends State<ProfilePage> {
             readOnly: true,
             decoration: const InputDecoration(
               labelText: 'Email',
-              helperText: 'Email khong the thay doi tu mobile',
+              helperText: 'Email không thể thay đổi từ mobile',
             ),
             validator: Validators.email,
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _phoneController,
-            decoration: const InputDecoration(labelText: 'So dien thoai'),
+            decoration: const InputDecoration(labelText: 'Số điện thoại'),
           ),
           const SizedBox(height: 12),
           _DobField(
@@ -192,7 +192,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Cap nhat mat khau',
+              'Cập nhật mật khẩu',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: AppColors.muted,
@@ -203,17 +203,17 @@ class _ProfilePageState extends State<ProfilePage> {
           TextFormField(
             controller: _currentPasswordController,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Mat khau hien tai'),
+            decoration: const InputDecoration(labelText: 'Mật khẩu hiện tại'),
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _newPasswordController,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Mat khau moi'),
+            decoration: const InputDecoration(labelText: 'Mật khẩu mới'),
             validator: (value) {
               if ((value ?? '').isEmpty) return null;
               if (_currentPasswordController.text.isEmpty) {
-                return 'Nhap mat khau hien tai truoc';
+                return 'Nhập mật khẩu hiện tại trước';
               }
               return Validators.password(value);
             },
@@ -223,19 +223,19 @@ class _ProfilePageState extends State<ProfilePage> {
             controller: _confirmPasswordController,
             obscureText: true,
             decoration: const InputDecoration(
-              labelText: 'Nhap lai mat khau moi',
+              labelText: 'Nhập lại mật khẩu mới',
             ),
             validator: (value) {
               if (_newPasswordController.text.isEmpty) return null;
               if (value != _newPasswordController.text) {
-                return 'Mat khau khong khop';
+                return 'Mật khẩu không khớp';
               }
               return null;
             },
           ),
           const SizedBox(height: 24),
           AppButton(
-            label: controller.isSaving ? 'Dang luu...' : 'Luu thay doi',
+            label: controller.isSaving ? 'Đang lưu...' : 'Lưu thay đổi',
             isLoading: controller.isSaving,
             onPressed:
                 controller.isSaving
@@ -297,7 +297,7 @@ class _ProfilePageState extends State<ProfilePage> {
       });
       controller.loadProfile(refresh: true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cap nhat ho so thanh cong')),
+        const SnackBar(content: Text('Cập nhật hồ sơ thành công')),
       );
     }
   }
@@ -316,7 +316,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (!launched && mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Khong the mo $url')));
+      ).showSnackBar(SnackBar(content: Text('Không thể mở $url')));
     }
   }
 
@@ -406,7 +406,7 @@ class _ProfileHeader extends StatelessWidget {
                     Icon(Icons.verified_user, color: Colors.white, size: 16),
                     SizedBox(width: 6),
                     Text(
-                      'Thanh vien Student Portal',
+                      'Thành viên Student Portal',
                       style: TextStyle(color: Colors.white, fontSize: 13),
                     ),
                   ],
@@ -507,7 +507,7 @@ class _ProgressHighlights extends StatelessWidget {
         ),
         child: Text(
           errorMessage ??
-              'Chua co du lieu tien do. Bat dau voi khoa hoc dau tien!',
+              'Chưa có dữ liệu tiến độ. Bắt đầu với khóa học đầu tiên!',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       );
@@ -516,13 +516,13 @@ class _ProgressHighlights extends StatelessWidget {
       children: [
         _HighlightTile(
           icon: Icons.menu_book_outlined,
-          label: 'Khoa dang hoc',
+          label: 'Khóa đang học',
           value: overview!.totalCourses.toString(),
         ),
         const SizedBox(width: 12),
         _HighlightTile(
           icon: Icons.auto_graph,
-          label: 'Tien do TB',
+          label: 'Tiến độ TB',
           value:
               overview!.averageProgress == null
                   ? '--'
@@ -531,7 +531,7 @@ class _ProgressHighlights extends StatelessWidget {
         const SizedBox(width: 12),
         _HighlightTile(
           icon: Icons.timer_outlined,
-          label: 'Gio hoc',
+          label: 'Giờ học',
           value: overview!.totalLearningHours.toStringAsFixed(1),
         ),
       ],
@@ -601,20 +601,20 @@ class _ProgressSection extends StatelessWidget {
     if (isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
-        child: LoadingIndicator(message: 'Dang tai tien do...'),
+        child: LoadingIndicator(message: 'Đang tải tiến độ...'),
       );
     }
 
     if (overview == null) {
       return Text(
-        errorMessage ?? 'Chua co khoa hoc nao dang hoc.',
+        errorMessage ?? 'Chưa có khóa học nào đang học.',
         style: Theme.of(context).textTheme.bodyMedium,
       );
     }
 
     if (overview!.courses.isEmpty) {
       return Text(
-        'Bat dau hoc de theo doi tien do tai day.',
+        'Bắt đầu học để theo dõi tiến độ tại đây.',
         style: Theme.of(context).textTheme.bodyMedium,
       );
     }
@@ -696,7 +696,7 @@ class _ProgressCourseCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '${snapshot.overallPercent}% hoan thanh',
+                        '${snapshot.overallPercent}% hoàn thành',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const Spacer(),
@@ -713,14 +713,14 @@ class _ProgressCourseCard extends StatelessWidget {
                     children: [
                       if (snapshot.lessonsTotal > 0)
                         Text(
-                          '${snapshot.lessonsDone}/${snapshot.lessonsTotal} bai',
+                          '${snapshot.lessonsDone}/${snapshot.lessonsTotal} bài',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       const Spacer(),
                       FilledButton.icon(
                         onPressed: onTap,
                         icon: const Icon(Icons.play_circle_outline),
-                        label: const Text('Mo khoa'),
+                        label: const Text('Mở khóa'),
                       ),
                     ],
                   ),
@@ -802,17 +802,17 @@ class _LogoutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           colors: [AppColors.primaryStrong, AppColors.primary],
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.all(Radius.circular(28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Dang xuat',
+            'Đăng xuất',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -820,7 +820,7 @@ class _LogoutCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Bao ve tai khoan cua ban bang cach dang xuat khoi thiet bi nay.',
+            'Bảo vệ tài khoản của bạn bằng cách đăng xuất khỏi thiết bị này.',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
@@ -833,7 +833,7 @@ class _LogoutCard extends StatelessWidget {
             ),
             onPressed: onLogout,
             icon: const Icon(Icons.logout),
-            label: const Text('Dang xuat khoi tai khoan'),
+            label: const Text('Đăng xuất khỏi tài khoản'),
           ),
         ],
       ),
@@ -852,12 +852,12 @@ class _DobField extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'Ngay sinh'),
+        decoration: const InputDecoration(labelText: 'Ngày sinh'),
         child: Row(
           children: [
             Text(
               date == null
-                  ? 'Chua cap nhat'
+                  ? 'Chưa cập nhật'
                   : '${date!.day.toString().padLeft(2, '0')}/${date!.month.toString().padLeft(2, '0')}/${date!.year}',
             ),
             const Spacer(),

@@ -52,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.of(context).pushReplacementNamed(AppRouter.home);
     } else {
       _showSnack(
-        controller.errorMessage ?? 'Dang nhap that bai, vui long thu lai.',
+        controller.errorMessage ?? 'Đăng nhập thất bại, vui lòng thử lại.',
       );
     }
   }
@@ -63,9 +63,9 @@ class _LoginPageState extends State<LoginPage> {
         '${AppConfig.portalBaseUri.toString()}/?open=register&source=app';
     final launched = await launchUrlString(portalUrl);
     if (!launched && mounted) {
-      _showSnack('Khong the mo trang dang ky $portalUrl');
+      _showSnack('Không thể mở trang đăng ký $portalUrl');
     } else if (mounted) {
-      _showSnack('Vui long hoan tat dang ky tren cong web.');
+      _showSnack('Vui lòng hoàn tất đăng ký trên cổng web.');
     }
   }
 
@@ -120,11 +120,11 @@ class _LoginPageState extends State<LoginPage> {
               children: const [
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Text('Dang nhap'),
+                  child: Text('Đăng nhập'),
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Text('Dang ky'),
+                  child: Text('Đăng ký'),
                 ),
               ],
             ),
@@ -239,14 +239,14 @@ class _LoginPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Xin chao hoc vien!',
+                'Xin chào học viên!',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Dang nhap de tiep tuc hanh trinh hoc chung chi truc tuyen.',
+                'Đăng nhập để tiếp tục hành trình học trực tuyến.',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
@@ -262,13 +262,13 @@ class _LoginPanel extends StatelessWidget {
               const SizedBox(height: 16),
               AppTextField(
                 controller: passwordController,
-                label: 'Mat khau',
+                label: 'Mật khẩu',
                 obscureText: true,
                 validator: Validators.password,
               ),
               const SizedBox(height: 24),
               AppButton(
-                label: 'Dang nhap',
+                label: 'Đăng nhập',
                 isLoading: controller.isLoading,
                 onPressed:
                     controller.isLoading ? null : () => onSubmit(controller),
@@ -278,7 +278,7 @@ class _LoginPanel extends StatelessWidget {
                 child: TextButton(
                   onPressed:
                       controller.isLoading ? null : () => onSubmit(controller),
-                  child: const Text('Dang nhap nhanh'),
+                  child: const Text('Đăng nhập nhanh'),
                 ),
               ),
             ],
@@ -319,7 +319,7 @@ class _RegisterPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Dang ky',
+            'Đăng ký',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: textColor,
               fontWeight: FontWeight.bold,
@@ -327,7 +327,7 @@ class _RegisterPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tao tai khoan moi va kich hoat khoa hoc bang activation code.',
+            'Tạo tài khoản mới và kích hoạt khóa học bằng activation code.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: inverted ? Colors.white70 : AppColors.muted,
             ),
@@ -335,11 +335,11 @@ class _RegisterPanel extends StatelessWidget {
           const SizedBox(height: 20),
           _AuthInput(
             controller: nameController,
-            label: 'Ho va ten',
+            label: 'Họ và tên',
             validator:
                 (value) =>
                     value == null || value.isEmpty
-                        ? 'Vui long nhap ho ten'
+                        ? 'Vui lòng nhập họ tên'
                         : null,
             inverted: inverted,
           ),
@@ -354,19 +354,19 @@ class _RegisterPanel extends StatelessWidget {
           const SizedBox(height: 12),
           _AuthInput(
             controller: phoneController,
-            label: 'So dien thoai',
+            label: 'Số điện thoại',
             keyboardType: TextInputType.phone,
             validator:
                 (value) =>
                     value == null || value.length < 10
-                        ? 'Nhap so hop le'
+                        ? 'Nhập số hợp lệ'
                         : null,
             inverted: inverted,
           ),
           const SizedBox(height: 12),
           _AuthInput(
             controller: passwordController,
-            label: 'Mat khau',
+            label: 'Mật khẩu',
             obscureText: true,
             validator: Validators.password,
             inverted: inverted,
@@ -374,12 +374,12 @@ class _RegisterPanel extends StatelessWidget {
           const SizedBox(height: 12),
           _AuthInput(
             controller: confirmController,
-            label: 'Nhap lai mat khau',
+            label: 'Nhập lại mật khẩu',
             obscureText: true,
             validator:
                 (value) =>
                     value != passwordController.text
-                        ? 'Mat khau khong khop'
+                        ? 'Mật khẩu không khớp'
                         : null,
             inverted: inverted,
           ),
@@ -396,7 +396,7 @@ class _RegisterPanel extends StatelessWidget {
                 ),
               ),
               onPressed: onSubmit,
-              child: const Text('Mo trang dang ky'),
+              child: const Text('Mở trang đăng ký'),
             ),
           ),
         ],

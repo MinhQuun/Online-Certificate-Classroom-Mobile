@@ -37,7 +37,7 @@ class _CourseDetailContent extends StatelessWidget {
         final detail = controller.detail;
         final placeholder = CourseDetail(
           id: args.courseId,
-          title: args.initialCourse?.title ?? 'Khoa hoc',
+          title: args.initialCourse?.title ?? 'Khóa học',
           description: args.initialCourse?.shortDescription,
           coverImage: args.initialCourse?.coverImage,
           chapters: const [],
@@ -46,14 +46,14 @@ class _CourseDetailContent extends StatelessWidget {
 
         if (controller.isLoading && detail == null) {
           return const Scaffold(
-            body: LoadingIndicator(message: 'Dang tai khoa hoc...'),
+            body: LoadingIndicator(message: 'Đang tải khóa học...'),
           );
         }
 
         if (controller.errorMessage != null && detail == null) {
           return Scaffold(
             body: ErrorView(
-              title: 'Khong the tai khoa hoc',
+              title: 'Không thể tải khóa học',
               message: controller.errorMessage,
               onRetry: () => controller.loadDetail(refresh: true),
             ),
@@ -109,7 +109,7 @@ class _CourseDetailContent extends StatelessWidget {
                           ),
                         const SizedBox(height: 28),
                         Text(
-                          'Noi dung khoa hoc',
+                          'Nội dung khóa học',
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
@@ -122,7 +122,7 @@ class _CourseDetailContent extends StatelessWidget {
                   const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Text('Chua co du lieu bai hoc'),
+                      child: Text('Chưa có dữ liệu bài học'),
                     ),
                   )
                 else
@@ -185,7 +185,7 @@ class _CourseDetailContent extends StatelessWidget {
           bottomNavigationBar: Padding(
             padding: const EdgeInsets.all(20),
             child: AppButton(
-              label: 'Vao hoc bai dau tien',
+              label: 'Vào bài học đầu tiên',
               onPressed:
                   data.chapters.isEmpty
                       ? null

@@ -57,7 +57,7 @@ class ErrorView extends StatelessWidget {
             ],
             if (onRetry != null) ...[
               const SizedBox(height: 20),
-              AppButton(label: 'Thu lai', onPressed: onRetry, expand: false),
+              AppButton(label: 'Thử lại', onPressed: onRetry, expand: false),
             ],
           ],
         ),

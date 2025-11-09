@@ -40,14 +40,14 @@ class _LessonContent extends StatelessWidget {
     return Consumer<LessonController>(
       builder: (context, controller, _) {
         final detail = controller.lesson;
-        final title = detail?.lesson.title ?? args.title ?? 'Bai hoc';
+        final title = detail?.lesson.title ?? args.title ?? 'Bài học';
         final courseName =
-            detail?.course?.title ?? args.courseName ?? 'Khoa hoc';
+            detail?.course?.title ?? args.courseName ?? 'Khóa học';
 
         if (controller.isLoading && detail == null) {
           return _LessonScaffold(
             title: courseName,
-            child: const LoadingIndicator(message: 'Dang tai bai hoc...'),
+            child: const LoadingIndicator(message: 'Đang tải bài học...'),
           );
         }
 
@@ -55,7 +55,7 @@ class _LessonContent extends StatelessWidget {
           return _LessonScaffold(
             title: courseName,
             child: ErrorView(
-              title: 'Khong the tai bai hoc',
+              title: 'Không thể tải bài học',
               message: controller.errorMessage,
               onRetry: controller.loadLesson,
             ),
@@ -91,7 +91,7 @@ class _LessonContent extends StatelessWidget {
               const SizedBox(height: 24),
               if (detail?.progress != null) ...[
                 Text(
-                  'Tien do bai hoc',
+                  'Tiến độ bài học',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -119,14 +119,14 @@ class _LessonContent extends StatelessWidget {
                 const SizedBox(height: 24),
               ],
               Text(
-                'Tai lieu bai hoc',
+                'Tài liệu bài học',
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               if (detail?.materials.isEmpty ?? true)
-                const Text('Chua co tai lieu dinh kem')
+                const Text('Chưa có tài liệu đính kèm')
               else
                 ...detail!.materials.map(
                   (material) => Card(
@@ -205,7 +205,7 @@ class _LessonHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bai hoc',
+                    'Bài học',
                     style: Theme.of(
                       context,
                     ).textTheme.labelLarge?.copyWith(color: Colors.white70),

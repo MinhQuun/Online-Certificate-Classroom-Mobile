@@ -27,11 +27,11 @@ class _EnrolledCoursesPageState extends State<EnrolledCoursesPage> {
       child: Consumer<EnrolledController>(
         builder: (context, controller, _) {
           if (controller.isLoading && controller.courses.isEmpty) {
-            return const LoadingIndicator(message: 'Dang tai khoa cua ban...');
+            return const LoadingIndicator(message: 'Đang tải khóa của bạn...');
           }
           if (controller.errorMessage != null && controller.courses.isEmpty) {
             return ErrorView(
-              title: 'Khong the tai khoa hoc',
+              title: 'Không thể tải khóa học',
               message: controller.errorMessage,
               onRetry: controller.loadEnrolled,
             );
@@ -74,7 +74,7 @@ class _EnrolledCoursesPageState extends State<EnrolledCoursesPage> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Text(
-                            'Khong co khoa nao trong trang thai nay.',
+                            'Không có khóa nào trong trạng thái này.',
                             style: Theme.of(context).textTheme.bodyMedium,
                             textAlign: TextAlign.center,
                           ),
@@ -179,7 +179,7 @@ class _EnrolledHero extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Khoa cua toi',
+              'Khóa của tôi',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -187,7 +187,7 @@ class _EnrolledHero extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Quan ly tien do hoc tap theo dung phong cach Student Portal.',
+              'Quản lý tiến độ học tập theo đúng phong cách Student Portal.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
@@ -195,12 +195,12 @@ class _EnrolledHero extends StatelessWidget {
             const SizedBox(height: 18),
             Row(
               children: [
-                _HeroStat(label: 'Tong khoa', value: '$total'),
+                _HeroStat(label: 'Tổng khóa', value: '$total'),
                 const SizedBox(width: 12),
-                _HeroStat(label: 'Dang hoc', value: '$active'),
+                _HeroStat(label: 'Đang học', value: '$active'),
                 const SizedBox(width: 12),
                 _HeroStat(
-                  label: 'Tien do TB',
+                  label: 'Tiến độ TB',
                   value: '${averageProgress.toStringAsFixed(0)}%',
                 ),
               ],
@@ -271,10 +271,10 @@ class _EnrolledTabs extends StatelessWidget {
             _EnrolledTab.values.map((tab) {
               final isActive = tab == activeTab;
               final label = switch (tab) {
-                _EnrolledTab.all => 'Tat ca',
-                _EnrolledTab.active => 'Dang hoc',
-                _EnrolledTab.pending => 'Cho kich hoat',
-                _EnrolledTab.expired => 'Het han',
+                _EnrolledTab.all => 'Tất cả',
+                _EnrolledTab.active => 'Đang học',
+                _EnrolledTab.pending => 'Chờ kích hoạt',
+                _EnrolledTab.expired => 'Hết hạn',
               };
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
@@ -354,7 +354,7 @@ class _EnrolledCard extends StatelessWidget {
                   ),
                 const SizedBox(height: 6),
                 Text(
-                  summary?.title ?? 'Khoa hoc',
+                  summary?.title ?? 'Khóa học',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -362,7 +362,7 @@ class _EnrolledCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 if (course.lastLesson != null)
                   Text(
-                    'Tiep theo: ${course.lastLesson!.title}',
+                    'Tiếp theo: ${course.lastLesson!.title}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 const SizedBox(height: 12),
@@ -381,7 +381,7 @@ class _EnrolledCard extends StatelessWidget {
                     const Spacer(),
                     if (course.avgMiniTest != null)
                       Text(
-                        'Minitest: ${course.avgMiniTest!.toStringAsFixed(1)}',
+                        'Bài tập: ${course.avgMiniTest!.toStringAsFixed(1)}',
                         style: Theme.of(
                           context,
                         ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
@@ -407,7 +407,7 @@ class _EnrolledCard extends StatelessWidget {
                                   );
                                 },
                         icon: const Icon(Icons.play_arrow),
-                        label: const Text('Tiep tuc hoc'),
+                        label: const Text('Tiếp tục học'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -453,17 +453,17 @@ class _StatusChip extends StatelessWidget {
       case 'ACTIVE':
         bg = const Color(0x332563EB);
         fg = AppColors.primary;
-        label = 'Dang hoc';
+        label = 'Đang học';
         break;
       case 'PENDING':
         bg = const Color(0x33F97316);
         fg = const Color(0xFFF97316);
-        label = 'Cho kich hoat';
+        label = 'Chờ kích hoạt';
         break;
       case 'EXPIRED':
         bg = const Color(0x33EF4444);
         fg = const Color(0xFFEF4444);
-        label = 'Het han';
+        label = 'Hết hạn';
         break;
       default:
         bg = const Color(0x330F172A);
@@ -516,7 +516,7 @@ class _EnrolledEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Ban chua dang ky khoa hoc nao',
+              'Bạn chưa đăng ký khóa học nào',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -524,7 +524,7 @@ class _EnrolledEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Khams pha thu vien khoa hoc de bat dau hanh trinh moi.',
+              'Khám phá thư viện khóa học để bắt đầu hành trình mới.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),

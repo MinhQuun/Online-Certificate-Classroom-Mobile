@@ -44,19 +44,19 @@ class _CoursesContentState extends State<_CoursesContent> {
     return Consumer<CoursesController>(
       builder: (context, controller, _) {
         if (controller.isLoading && controller.courses.isEmpty) {
-          return const LoadingIndicator(message: 'Dang tai khoa hoc...');
+          return const LoadingIndicator(message: 'Đang tải khóa học...');
         }
         if (controller.errorMessage != null && controller.courses.isEmpty) {
           return ErrorView(
-            title: 'Khong the tai danh sach',
+            title: 'Không thể tải danh sách',
             message: controller.errorMessage,
             onRetry: controller.loadCourses,
           );
         }
         if (controller.courses.isEmpty) {
           return _EmptyState(
-            title: 'Chua co khoa hoc',
-            message: 'Danh muc hien tai chua co noi dung. Thu quay lai sau.',
+            title: 'Chưa có khóa học',
+            message: 'Danh mục hiện tại chưa có nội dung. Thử quay lại sau.',
             onRetry: controller.loadCourses,
           );
         }
@@ -100,8 +100,8 @@ class _CoursesContentState extends State<_CoursesContent> {
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: _EmptyState(
-                    title: 'Khong tim thay khoa hoc',
-                    message: 'Thu doi tu khoa hoac danh muc khac.',
+                    title: 'Không tìm thấy khóa học',
+                    message: 'Thử đổi từ khóa hoặc danh mục khác.',
                   ),
                 )
               else
@@ -204,7 +204,7 @@ class _CoursesHero extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                '$totalCourses khoa hoc dang mo',
+                '$totalCourses Khóa học đang mở',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
@@ -213,7 +213,7 @@ class _CoursesHero extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Kho khoa hoc chuan Student Portal',
+              'Kho khóa học chuẩn Student Portal',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -221,7 +221,7 @@ class _CoursesHero extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Theo lo trinh ro rang voi mentor dong hanh va bai kiem tra dinh ky.',
+              'Theo lộ trình rõ ràng với mentor đồng hành và bài tập.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.white.withValues(alpha: 0.9),
               ),
@@ -231,7 +231,7 @@ class _CoursesHero extends StatelessWidget {
               controller: searchController,
               onChanged: onSearchChanged,
               decoration: InputDecoration(
-                hintText: 'Tim kiem khoa hoc...',
+                hintText: 'Tìm kiếm khóa học...',
                 filled: true,
                 fillColor: Colors.white,
                 prefixIcon: const Icon(Icons.search),
@@ -250,8 +250,8 @@ class _CoursesHero extends StatelessWidget {
               spacing: 12,
               runSpacing: 12,
               children: const [
-                _HeroMetaChip(label: 'Tai lieu phong phu'),
-                _HeroMetaChip(label: 'Mentor theo sat'),
+                _HeroMetaChip(label: 'Tài liệu phong phú'),
+                _HeroMetaChip(label: 'Mentor theo sát'),
                 _HeroMetaChip(label: 'Review exercises'),
               ],
             ),
@@ -436,7 +436,7 @@ class _CourseCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '${course.lessonsCount ?? 0} bai',
+                          '${course.lessonsCount ?? 0} bài',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         const Spacer(),
@@ -454,7 +454,7 @@ class _CourseCard extends StatelessWidget {
                         const Spacer(),
                         FilledButton(
                           onPressed: onTap,
-                          child: const Text('Xem chi tiet'),
+                          child: const Text('Xem chi tiết'),
                         ),
                       ],
                     ),
@@ -478,7 +478,7 @@ class _PriceTag extends StatelessWidget {
   Widget build(BuildContext context) {
     if (price == null || price!.sale == null) {
       return const Text(
-        'Lien he',
+        'Liên hệ',
         style: TextStyle(fontWeight: FontWeight.w600),
       );
     }
@@ -546,7 +546,7 @@ class _EmptyState extends StatelessWidget {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: onRetry,
-                child: const Text('Thu tai lai'),
+                child: const Text('Thử tải lại'),
               ),
             ],
           ],

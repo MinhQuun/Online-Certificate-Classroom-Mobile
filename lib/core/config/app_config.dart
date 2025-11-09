@@ -7,6 +7,7 @@ class AppConfig {
   /// Laravel Student API base URL (dev).
   // static const String baseUrl = 'http://127.0.0.1:8000/api/v1';
 
+  // IP Quân
   static const String baseUrl = 'http://192.168.1.3:8000/api/v1';
 
   /// Returns the base student portal origin without `/api/vX`.
