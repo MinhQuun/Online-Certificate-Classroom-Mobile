@@ -22,4 +22,13 @@ class ProfileApi {
     }
     return const {};
   }
+
+  Future<Map<String, dynamic>> fetchProgressOverview() async {
+    final response = await _client.get('/student/progress/overview');
+    if (response is Map<String, dynamic>) {
+      final data = response['data'];
+      if (data is Map<String, dynamic>) return data;
+    }
+    return const {};
+  }
 }

@@ -15,16 +15,29 @@ class CoursesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create:
-          (_) => CoursesController()
-            ..loadCourses(),
+      create: (_) => CoursesController()..loadCourses(),
       child: const _CoursesContent(),
     );
   }
 }
 
-class _CoursesContent extends StatelessWidget {
+class _CoursesContent extends StatefulWidget {
   const _CoursesContent();
+
+  @override
+  State<_CoursesContent> createState() => _CoursesContentState();
+}
+
+class _CoursesContentState extends State<_CoursesContent> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String? _selectedCategory;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,49 +54,282 @@ class _CoursesContent extends StatelessWidget {
           );
         }
         if (controller.courses.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Chua co khoa hoc de hien thi.',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed:
-                      controller.isLoading ? null : controller.loadCourses,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Thu tai lai'),
-                ),
-              ],
-            ),
+          return _EmptyState(
+            title: 'Chua co khoa hoc',
+            message: 'Danh muc hien tai chua co noi dung. Thu quay lai sau.',
+            onRetry: controller.loadCourses,
           );
         }
+
+        final categories = _buildCategories(controller.courses);
+        final filtered = _filterCourses(controller.courses);
+
         return RefreshIndicator(
           onRefresh: () => controller.loadCourses(refresh: true),
-          child: ListView.separated(
-            padding: const EdgeInsets.all(20),
-            itemCount: controller.courses.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (_, index) {
-              final course = controller.courses[index];
-              return _CourseCard(
-                course: course,
-                onTap: () {
-                  Navigator.of(context).pushNamed(
-                    AppRouter.courseDetail,
-                    arguments: CourseDetailArgs(
-                      courseId: course.id,
-                      initialCourse: course,
-                    ),
-                  );
-                },
-              );
-            },
+          color: AppColors.primary,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            slivers: [
+              SliverToBoxAdapter(
+                child: _CoursesHero(
+                  totalCourses: controller.courses.length,
+                  searchController: _searchController,
+                  onSearchChanged: (value) {
+                    setState(() => _searchQuery = value.trim().toLowerCase());
+                  },
+                ),
+              ),
+              if (categories.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _CategoryChips(
+                    categories: categories,
+                    selected: _selectedCategory,
+                    onSelected: (value) {
+                      setState(() {
+                        _selectedCategory =
+                            _selectedCategory == value ? null : value;
+                      });
+                    },
+                  ),
+                ),
+              if (controller.isLoading)
+                const SliverToBoxAdapter(child: _InlineLoader()),
+              if (filtered.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _EmptyState(
+                    title: 'Khong tim thay khoa hoc',
+                    message: 'Thu doi tu khoa hoac danh muc khac.',
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                  sliver: SliverGrid(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final course = filtered[index];
+                      return _CourseCard(
+                        course: course,
+                        onTap: () {
+                          Navigator.of(context).pushNamed(
+                            AppRouter.courseDetail,
+                            arguments: CourseDetailArgs(
+                              courseId: course.id,
+                              initialCourse: course,
+                            ),
+                          );
+                        },
+                      );
+                    }, childCount: filtered.length),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 420,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.82,
+                        ),
+                  ),
+                ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  List<String> _buildCategories(List<CourseSummary> courses) {
+    final set = <String>{};
+    for (final course in courses) {
+      final category = course.categoryName?.trim();
+      if (category != null && category.isNotEmpty) {
+        set.add(category);
+      }
+    }
+    return set.toList();
+  }
+
+  List<CourseSummary> _filterCourses(List<CourseSummary> courses) {
+    return courses.where((course) {
+      final matchesCategory =
+          _selectedCategory == null ||
+          (course.categoryName?.toLowerCase() ==
+              _selectedCategory!.toLowerCase());
+      final matchesQuery =
+          _searchQuery.isEmpty ||
+          course.title.toLowerCase().contains(_searchQuery) ||
+          (course.shortDescription?.toLowerCase().contains(_searchQuery) ??
+              false);
+      return matchesCategory && matchesQuery;
+    }).toList();
+  }
+}
+
+class _CoursesHero extends StatelessWidget {
+  const _CoursesHero({
+    required this.totalCourses,
+    required this.searchController,
+    required this.onSearchChanged,
+  });
+
+  final int totalCourses;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: AppGradients.primary,
+          borderRadius: BorderRadius.circular(36),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x220F172A),
+              blurRadius: 30,
+              offset: Offset(0, 20),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$totalCourses khoa hoc dang mo',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Kho khoa hoc chuan Student Portal',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Theo lo trinh ro rang voi mentor dong hanh va bai kiem tra dinh ky.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: searchController,
+              onChanged: onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Tim kiem khoa hoc...',
+                filled: true,
+                fillColor: Colors.white,
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: const [
+                _HeroMetaChip(label: 'Tai lieu phong phu'),
+                _HeroMetaChip(label: 'Mentor theo sat'),
+                _HeroMetaChip(label: 'Review exercises'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroMetaChip extends StatelessWidget {
+  const _HeroMetaChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Text(label, style: const TextStyle(color: Colors.white)),
+    );
+  }
+}
+
+class _CategoryChips extends StatelessWidget {
+  const _CategoryChips({
+    required this.categories,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<String> categories;
+  final String? selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          final isActive =
+              selected != null &&
+              category.toLowerCase() == selected!.toLowerCase();
+          return ChoiceChip(
+            label: Text(category),
+            selected: isActive,
+            onSelected: (_) => onSelected(category),
+            selectedColor: AppColors.primary,
+            labelStyle: TextStyle(
+              color: isActive ? Colors.white : AppColors.text,
+              fontWeight: FontWeight.w600,
+            ),
+          );
+        },
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemCount: categories.length,
+      ),
+    );
+  }
+}
+
+class _InlineLoader extends StatelessWidget {
+  const _InlineLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 12),
+      child: LinearProgressIndicator(minHeight: 4),
     );
   }
 }
@@ -97,88 +343,212 @@ class _CourseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(28),
       onTap: onTap,
       child: Ink(
-        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(28),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x120F172A),
-              blurRadius: 20,
-              offset: Offset(0, 12),
+              color: Color(0x140F172A),
+              blurRadius: 24,
+              offset: Offset(0, 16),
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Image.network(
-                course.coverImage ??
-                    'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400',
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (course.categoryName != null) ...[
-                    Text(
-                      course.categoryName!.toUpperCase(),
-                      style:
-                          Theme.of(context).textTheme.labelSmall?.copyWith(
-                                letterSpacing: 1.1,
-                                color: AppColors.muted,
-                                fontWeight: FontWeight.w600,
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      course.coverImage ??
+                          'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600',
+                      fit: BoxFit.cover,
+                    ),
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child:
+                          course.categoryName == null
+                              ? const SizedBox.shrink()
+                              : Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  course.categoryName!,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
                               ),
                     ),
-                    const SizedBox(height: 6),
                   ],
-                  Text(
-                    course.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 6),
-                  if (course.shortDescription != null)
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      course.shortDescription!,
+                      course.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.muted,
-                              ),
-                    ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.menu_book_outlined,
-                        size: 16,
-                        color: AppColors.muted,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
-                      const SizedBox(width: 4),
-                      Text('${course.lessonsCount ?? 0} bai'),
-                      const Spacer(),
-                      if (course.teacherName != null)
-                        Text(
-                          course.teacherName!,
-                          style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    if (course.shortDescription != null)
+                      Text(
+                        course.shortDescription!,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.muted,
                         ),
-                    ],
-                  ),
-                ],
+                      ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.menu_book_outlined,
+                          size: 16,
+                          color: AppColors.muted,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${course.lessonsCount ?? 0} bai',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const Spacer(),
+                        if (course.teacherName != null)
+                          Text(
+                            course.teacherName!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _PriceTag(price: course.price),
+                        const Spacer(),
+                        FilledButton(
+                          onPressed: onTap,
+                          child: const Text('Xem chi tiet'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PriceTag extends StatelessWidget {
+  const _PriceTag({this.price});
+
+  final CoursePrice? price;
+
+  @override
+  Widget build(BuildContext context) {
+    if (price == null || price!.sale == null) {
+      return const Text(
+        'Lien he',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      );
+    }
+    final currency = price!.currency ?? 'VND';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${price!.sale!.toStringAsFixed(0)} $currency',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+        if (price!.original != null && price!.original! > (price!.sale ?? 0))
+          Text(
+            '${price!.original!.toStringAsFixed(0)} $currency',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.muted,
+              decoration: TextDecoration.lineThrough,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.title, required this.message, this.onRetry});
+
+  final String title;
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.menu_book_outlined,
+              size: 48,
+              color: AppColors.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+              textAlign: TextAlign.center,
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: onRetry,
+                child: const Text('Thu tai lai'),
+              ),
+            ],
           ],
         ),
       ),

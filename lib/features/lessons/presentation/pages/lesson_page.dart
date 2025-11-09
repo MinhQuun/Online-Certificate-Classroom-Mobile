@@ -9,11 +9,7 @@ import 'package:cert_classroom_mobile/shared/widgets/error_view.dart';
 import 'package:cert_classroom_mobile/shared/widgets/loading_indicator.dart';
 
 class LessonPageArgs {
-  const LessonPageArgs({
-    required this.lessonId,
-    this.title,
-    this.courseName,
-  });
+  const LessonPageArgs({required this.lessonId, this.title, this.courseName});
 
   final int lessonId;
   final String? title;
@@ -28,9 +24,7 @@ class LessonPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create:
-          (_) => LessonController(lessonId: args.lessonId)
-            ..loadLesson(),
+      create: (_) => LessonController(lessonId: args.lessonId)..loadLesson(),
       child: _LessonContent(args: args),
     );
   }
@@ -51,16 +45,16 @@ class _LessonContent extends StatelessWidget {
             detail?.course?.title ?? args.courseName ?? 'Khoa hoc';
 
         if (controller.isLoading && detail == null) {
-          return Scaffold(
-            appBar: AppBar(title: Text(courseName)),
-            body: const LoadingIndicator(message: 'Dang tai bai hoc...'),
+          return _LessonScaffold(
+            title: courseName,
+            child: const LoadingIndicator(message: 'Dang tai bai hoc...'),
           );
         }
 
         if (controller.errorMessage != null && detail == null) {
-          return Scaffold(
-            appBar: AppBar(title: Text(courseName)),
-            body: ErrorView(
+          return _LessonScaffold(
+            title: courseName,
+            child: ErrorView(
               title: 'Khong the tai bai hoc',
               message: controller.errorMessage,
               onRetry: controller.loadLesson,
@@ -68,10 +62,10 @@ class _LessonContent extends StatelessWidget {
           );
         }
 
-        return Scaffold(
-          appBar: AppBar(title: Text(courseName)),
-          body: ListView(
-            padding: const EdgeInsets.all(20),
+        return _LessonScaffold(
+          title: courseName,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
             children: [
               _VideoSection(
                 coverImage: detail?.course?.coverImage,
@@ -81,41 +75,42 @@ class _LessonContent extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 title,
-                style:
-                    Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               if (detail?.lesson.description != null) ...[
                 const SizedBox(height: 12),
                 Text(
                   detail!.lesson.description!,
-                  style:
-                      Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.muted,
-                          ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
                 ),
               ],
               const SizedBox(height: 24),
               if (detail?.progress != null) ...[
                 Text(
                   'Tien do bai hoc',
-                  style:
-                      Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: LinearProgressIndicator(
-                    value: detail!.progress?.status == 'COMPLETED'
-                        ? 1
-                        : (detail.progress?.videoProgressSeconds ?? 0) /
-                            (detail.progress?.videoDurationSeconds == null ||
-                                    detail.progress!.videoDurationSeconds == 0
-                                ? 1
-                                : detail.progress!.videoDurationSeconds!.toDouble()),
+                    value:
+                        detail!.progress?.status == 'COMPLETED'
+                            ? 1
+                            : (detail.progress?.videoProgressSeconds ?? 0) /
+                                (detail.progress?.videoDurationSeconds ==
+                                            null ||
+                                        detail.progress!.videoDurationSeconds ==
+                                            0
+                                    ? 1
+                                    : detail.progress!.videoDurationSeconds!
+                                        .toDouble()),
                     minHeight: 10,
                   ),
                 ),
@@ -125,10 +120,9 @@ class _LessonContent extends StatelessWidget {
               ],
               Text(
                 'Tai lieu bai hoc',
-                style:
-                    Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               if (detail?.materials.isEmpty ?? true)
@@ -164,6 +158,88 @@ class _LessonContent extends StatelessWidget {
   Future<void> _openMaterial(String url) async {
     if (url.isEmpty) return;
     await launchUrlString(url);
+  }
+}
+
+class _LessonScaffold extends StatelessWidget {
+  const _LessonScaffold({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [_LessonHeader(title: title), Expanded(child: child)],
+        ),
+      ),
+    );
+  }
+}
+
+class _LessonHeader extends StatelessWidget {
+  const _LessonHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          gradient: AppGradients.primary,
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Row(
+          children: [
+            _BackCircleButton(onTap: () => Navigator.of(context).maybePop()),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Bai hoc',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelLarge?.copyWith(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BackCircleButton extends StatelessWidget {
+  const _BackCircleButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      child: IconButton(onPressed: onTap, icon: const Icon(Icons.arrow_back)),
+    );
   }
 }
 

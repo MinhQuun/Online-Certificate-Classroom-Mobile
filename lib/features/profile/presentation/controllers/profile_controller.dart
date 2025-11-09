@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:cert_classroom_mobile/features/profile/data/models/profile.dart';
+import 'package:cert_classroom_mobile/features/profile/data/models/progress_overview.dart';
 import 'package:cert_classroom_mobile/features/profile/data/profile_repository.dart';
 
 class ProfileController extends ChangeNotifier {
@@ -11,9 +12,12 @@ class ProfileController extends ChangeNotifier {
 
   bool isLoading = false;
   bool isSaving = false;
+  bool isProgressLoading = false;
   String? errorMessage;
   String? successMessage;
+  String? progressError;
   Profile? profile;
+  ProgressOverview? progress;
 
   Future<void> loadProfile({bool refresh = false}) async {
     if (isLoading) return;
@@ -28,6 +32,7 @@ class ProfileController extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+    await loadProgressOverview();
   }
 
   Future<bool> updateProfile(ProfileUpdateInput input) async {
@@ -45,6 +50,22 @@ class ProfileController extends ChangeNotifier {
       return false;
     } finally {
       isSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadProgressOverview() async {
+    if (isProgressLoading) return;
+    isProgressLoading = true;
+    progressError = null;
+    notifyListeners();
+    try {
+      progress = await _repository.fetchProgressOverview();
+    } catch (e) {
+      progressError = 'Khong the tai tien do hoc tap';
+      progress = null;
+    } finally {
+      isProgressLoading = false;
       notifyListeners();
     }
   }

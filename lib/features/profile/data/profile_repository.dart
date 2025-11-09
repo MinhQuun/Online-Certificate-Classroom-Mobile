@@ -1,4 +1,5 @@
 import 'models/profile.dart';
+import 'models/progress_overview.dart';
 import 'profile_api.dart';
 
 class ProfileRepository {
@@ -34,5 +35,11 @@ class ProfileRepository {
       'date_of_birth': student['date_of_birth'] ?? user['date_of_birth'],
     };
     return Profile.fromJson(merged);
+  }
+
+  Future<ProgressOverview?> fetchProgressOverview() async {
+    final json = await _api.fetchProgressOverview();
+    if (json.isEmpty) return null;
+    return ProgressOverview.fromJson(json);
   }
 }
