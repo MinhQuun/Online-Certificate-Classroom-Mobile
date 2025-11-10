@@ -4,11 +4,7 @@ class AppConfig {
 
   static const String appName = 'Online Certificate Classroom';
 
-  /// Laravel Student API base URL (dev).
-  // static const String baseUrl = 'http://127.0.0.1:8000/api/v1';
-
-  // IP Quân
-  static const String baseUrl = 'http://192.168.1.3:8000/api/v1';
+  static const String baseUrl = 'https://onlcertificateclassroom.online/api/v1';
 
   /// Returns the base student portal origin without `/api/vX`.
   static Uri get portalBaseUri {
