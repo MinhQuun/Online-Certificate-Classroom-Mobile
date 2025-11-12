@@ -36,6 +36,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final _confirmPasswordController = TextEditingController();
   DateTime? _selectedDob;
   bool _didPopulate = false;
+  bool _isEditingProfile = false;
+  bool _showPasswordFields = false;
 
   @override
   void dispose() {
@@ -120,18 +122,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     email: profile?.email ?? '',
                   ),
                   const SizedBox(height: 20),
+
                   _ProgressHighlights(
                     overview: controller.progress,
                     isLoading: controller.isProgressLoading,
                     errorMessage: controller.progressError,
                   ),
                   const SizedBox(height: 20),
-                  _SectionCard(
-                    title: 'Trang cá nhân',
-                    subtitle: 'Cập nhật thông tin liên hệ và mật khẩu',
-                    child: _buildProfileForm(controller),
-                  ),
-                  const SizedBox(height: 20),
+
                   _SectionCard(
                     title: 'Tiến độ học tập',
                     subtitle: 'Theo dõi những khóa học đang học',
@@ -144,6 +142,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 20),
+
                   _SectionCard(
                     title: 'Mã kích hoạt',
                     subtitle: 'Kích hoạt khóa học bằng mã đã mua',
@@ -157,6 +156,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
                   _SectionCard(
                     title: 'Lịch sử đơn hàng',
                     subtitle: 'Xem lại các giao dịch đã thanh toán',
@@ -169,10 +169,15 @@ class _ProfilePageState extends State<ProfilePage> {
                       onTap: () => _openPortal('student/order-history'),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  _LogoutCard(
-                    onLogout: _handleLogout,
+                  const SizedBox(height: 20),
+
+                  _SectionCard(
+                    title: 'Trang cá nhân',
+                    subtitle: 'Thông tin liên hệ & bảo mật tài khoản',
+                    child: _buildProfileForm(controller),
                   ),
+                  const SizedBox(height: 24),
+                  _LogoutCard(onLogout: _handleLogout),
                 ],
               ),
             ),
@@ -183,12 +188,43 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildProfileForm(ProfileController controller) {
+    final theme = Theme.of(context);
+
     return Form(
       key: _formKey,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // ==== THÔNG TIN LIÊN HỆ ====
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Thông tin liên hệ',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _isEditingProfile = !_isEditingProfile;
+                  });
+                },
+                child: Text(_isEditingProfile ? 'Hủy' : 'Chỉnh sửa'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Cập nhật họ tên, số điện thoại và ngày sinh để trung tâm dễ liên hệ.',
+            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(height: 16),
+
           TextFormField(
             controller: _fullNameController,
+            readOnly: !_isEditingProfile,
             decoration: const InputDecoration(labelText: 'Họ và tên'),
             validator:
                 (value) =>
@@ -197,6 +233,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         : null,
           ),
           const SizedBox(height: 12),
+
           TextFormField(
             controller: _emailController,
             readOnly: true,
@@ -204,83 +241,118 @@ class _ProfilePageState extends State<ProfilePage> {
               labelText: 'Email',
               helperText: 'Email không thể thay đổi từ mobile',
             ),
-            validator: Validators.email,
           ),
           const SizedBox(height: 12),
+
           TextFormField(
             controller: _phoneController,
+            readOnly: !_isEditingProfile,
+            keyboardType: TextInputType.phone,
             decoration: const InputDecoration(labelText: 'Số điện thoại'),
-          ),
-          const SizedBox(height: 12),
-          _DobField(
-            date: _selectedDob,
-            onTap: () async {
-              final now = DateTime.now();
-              final picked = await showDatePicker(
-                context: context,
-                firstDate: DateTime(1950),
-                lastDate: DateTime(now.year + 1),
-                initialDate: _selectedDob ?? DateTime(now.year - 18),
-              );
-              if (picked != null) {
-                setState(() => _selectedDob = picked);
-              }
-            },
-          ),
-          const SizedBox(height: 20),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Cập nhật mật khẩu',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.muted,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _currentPasswordController,
-            obscureText: true,
-            decoration: const InputDecoration(labelText: 'Mật khẩu hiện tại'),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _newPasswordController,
-            obscureText: true,
-            decoration: const InputDecoration(labelText: 'Mật khẩu mới'),
             validator: (value) {
-              if ((value ?? '').isEmpty) return null;
-              if (_currentPasswordController.text.isEmpty) {
-                return 'Nhập mật khẩu hiện tại trước';
+              if (value == null || value.isEmpty) {
+                return null; // cho phép để trống
               }
-              return Validators.password(value);
-            },
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _confirmPasswordController,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'Nhập lại mật khẩu mới',
-            ),
-            validator: (value) {
-              if (_newPasswordController.text.isEmpty) return null;
-              if (value != _newPasswordController.text) {
-                return 'Mật khẩu không khớp';
+              if (value.length < 9) {
+                return 'Số điện thoại chưa hợp lệ';
               }
               return null;
             },
           ),
+          const SizedBox(height: 12),
           const SizedBox(height: 24),
-          AppButton(
-            label: controller.isSaving ? 'Đang lưu...' : 'Lưu thay đổi',
-            isLoading: controller.isSaving,
-            onPressed:
-                controller.isSaving
-                    ? null
-                    : () => _onSubmit(context, controller),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          // ==== BẢO MẬT & MẬT KHẨU ====
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Bảo mật & mật khẩu',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _showPasswordFields = !_showPasswordFields;
+                  });
+                },
+                child: Text(_showPasswordFields ? 'Ẩn' : 'Đổi mật khẩu'),
+              ),
+            ],
           ),
+          const SizedBox(height: 4),
+          Text(
+            'Chỉ nhập mật khẩu nếu bạn muốn thay đổi. Để trống nếu giữ nguyên.',
+            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(height: 8),
+
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 200),
+            crossFadeState:
+                _showPasswordFields
+                    ? CrossFadeState.showFirst
+                    : CrossFadeState.showSecond,
+            firstChild: Column(
+              children: [
+                TextFormField(
+                  controller: _currentPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Mật khẩu hiện tại',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _newPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Mật khẩu mới'),
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      return Validators.password(value);
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Nhập lại mật khẩu mới',
+                  ),
+                  validator: (value) {
+                    if (_newPasswordController.text.isEmpty) return null;
+                    if (value != _newPasswordController.text) {
+                      return 'Mật khẩu không khớp';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+            secondChild: const SizedBox.shrink(),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Chỉ hiện nút Lưu khi đang chỉnh sửa hoặc đổi mật khẩu
+          if (_isEditingProfile || _showPasswordFields) ...[
+            AppButton(
+              label: controller.isSaving ? 'Đang lưu...' : 'Lưu thay đổi',
+              isLoading: controller.isSaving,
+              onPressed:
+                  controller.isSaving
+                      ? null
+                      : () => _onSubmit(context, controller),
+            ),
+          ],
+
           if (controller.errorMessage != null &&
               controller.profile != null) ...[
             const SizedBox(height: 12),
@@ -333,6 +405,8 @@ class _ProfilePageState extends State<ProfilePage> {
         _newPasswordController.clear();
         _confirmPasswordController.clear();
         _didPopulate = false;
+        _isEditingProfile = false;
+        _showPasswordFields = false;
       });
       controller.loadProfile(refresh: true);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -875,34 +949,6 @@ class _LogoutCard extends StatelessWidget {
             label: const Text('Đăng xuất khỏi tài khoản'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DobField extends StatelessWidget {
-  const _DobField({required this.date, required this.onTap});
-
-  final DateTime? date;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'Ngày sinh'),
-        child: Row(
-          children: [
-            Text(
-              date == null
-                  ? 'Chưa cập nhật'
-                  : '${date!.day.toString().padLeft(2, '0')}/${date!.month.toString().padLeft(2, '0')}/${date!.year}',
-            ),
-            const Spacer(),
-            const Icon(Icons.calendar_today, size: 16),
-          ],
-        ),
       ),
     );
   }

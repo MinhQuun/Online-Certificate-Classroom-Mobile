@@ -27,7 +27,7 @@ class ProfileController extends ChangeNotifier {
     try {
       profile = await _repository.fetchProfile();
     } catch (e) {
-      errorMessage = 'Khong the tai thong tin ca nhan';
+      errorMessage = 'Không thể tải thông tin cá nhân';
     } finally {
       isLoading = false;
       notifyListeners();
@@ -62,7 +62,7 @@ class ProfileController extends ChangeNotifier {
     try {
       progress = await _repository.fetchProgressOverview();
     } catch (e) {
-      progressError = 'Khong the tai tien do hoc tap';
+      progressError = 'Không thể tải tiến độ học tập';
       progress = null;
     } finally {
       isProgressLoading = false;
