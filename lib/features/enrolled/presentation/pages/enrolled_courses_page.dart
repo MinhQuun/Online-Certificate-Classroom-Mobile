@@ -375,7 +375,7 @@ class _EnrolledCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      '${(course.percentOverall ?? 0).toStringAsFixed(0)}% hoan thanh',
+                      '${(course.percentOverall ?? 0).toStringAsFixed(0)}% hoàn thành',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const Spacer(),

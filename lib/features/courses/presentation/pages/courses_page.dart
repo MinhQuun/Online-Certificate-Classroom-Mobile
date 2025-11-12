@@ -88,8 +88,12 @@ class _CoursesContentState extends State<_CoursesContent> {
                     selected: _selectedCategory,
                     onSelected: (value) {
                       setState(() {
-                        _selectedCategory =
-                            _selectedCategory == value ? null : value;
+                        if (value == null) {
+                          _selectedCategory = null;
+                        } else {
+                          _selectedCategory =
+                              _selectedCategory == value ? null : value;
+                        }
                       });
                     },
                   ),
@@ -106,7 +110,7 @@ class _CoursesContentState extends State<_CoursesContent> {
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                   sliver: SliverGrid(
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final course = filtered[index];
@@ -128,7 +132,7 @@ class _CoursesContentState extends State<_CoursesContent> {
                           maxCrossAxisExtent: 420,
                           mainAxisSpacing: 16,
                           crossAxisSpacing: 16,
-                          childAspectRatio: 0.82,
+                          childAspectRatio: 0.80,
                         ),
                   ),
                 ),
@@ -141,13 +145,37 @@ class _CoursesContentState extends State<_CoursesContent> {
 
   List<String> _buildCategories(List<CourseSummary> courses) {
     final set = <String>{};
+
     for (final course in courses) {
       final category = course.categoryName?.trim();
       if (category != null && category.isNotEmpty) {
         set.add(category);
       }
     }
-    return set.toList();
+
+    final list = set.toList();
+
+    // Hàm phụ: lấy số đầu tiên trong chuỗi, ví dụ "TOEIC Advanced (785-990)" -> 785
+    int _extractStartScore(String s) {
+      final match = RegExp(r'(\d{3,})').firstMatch(s);
+      if (match == null) return 0;
+      return int.tryParse(match.group(1)!) ?? 0;
+    }
+
+    list.sort((a, b) {
+      final aScore = _extractStartScore(a);
+      final bScore = _extractStartScore(b);
+
+      // Nếu bắt được số thì sort theo số
+      if (aScore != 0 || bScore != 0) {
+        return aScore.compareTo(bScore);
+      }
+
+      // Fallback: sort theo chữ cái
+      return a.compareTo(b);
+    });
+
+    return list;
   }
 
   List<CourseSummary> _filterCourses(List<CourseSummary> courses) {
@@ -290,24 +318,34 @@ class _CategoryChips extends StatelessWidget {
 
   final List<String> categories;
   final String? selected;
-  final ValueChanged<String> onSelected;
+  final ValueChanged<String?> onSelected;
 
   @override
   Widget build(BuildContext context) {
+    final items = <String>['Tất cả', ...categories];
+
     return SizedBox(
       height: 46,
       child: ListView.separated(
-        scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
+        scrollDirection: Axis.horizontal,
         itemBuilder: (context, index) {
-          final category = categories[index];
-          final isActive =
-              selected != null &&
-              category.toLowerCase() == selected!.toLowerCase();
-          return ChoiceChip(
+          final category = items[index];
+          final bool isAll = index == 0;
+
+          final bool isActive = isAll ? selected == null : selected == category;
+
+          return FilterChip(
             label: Text(category),
             selected: isActive,
-            onSelected: (_) => onSelected(category),
+            onSelected: (_) {
+              if (isAll) {
+                // Chip "Tất cả" -> clear filter
+                onSelected(null);
+              } else {
+                onSelected(category);
+              }
+            },
             selectedColor: AppColors.primary,
             labelStyle: TextStyle(
               color: isActive ? Colors.white : AppColors.text,
@@ -316,7 +354,7 @@ class _CategoryChips extends StatelessWidget {
           );
         },
         separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemCount: categories.length,
+        itemCount: items.length,
       ),
     );
   }
