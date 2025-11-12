@@ -16,6 +16,9 @@ import 'package:cert_classroom_mobile/shared/widgets/app_button.dart';
 import 'package:cert_classroom_mobile/shared/widgets/error_view.dart';
 import 'package:cert_classroom_mobile/shared/widgets/loading_indicator.dart';
 
+import 'package:cert_classroom_mobile/core/utils/custom_snackbar.dart';
+import 'package:cert_classroom_mobile/features/auth/presentation/pages/login_page.dart';
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -43,6 +46,42 @@ class _ProfilePageState extends State<ProfilePage> {
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _showLogoutSnack(String message, {bool isSuccess = false}) {
+    showCustomSnackbar(
+      context: context,
+      message: message,
+      lottiePath:
+          isSuccess
+              ? 'assets/lottie/success.json' // success.json của bạn
+              : 'assets/lottie/error.json', // error.json của bạn
+      backgroundColor: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
+      textColor: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      // Gọi controller để xoá token / session, v.v.
+      await context.read<AuthController>().logout();
+
+      if (!mounted) return;
+
+      _showLogoutSnack('Đăng xuất thành công', isSuccess: true);
+
+      // Điều hướng về màn Login, xoá hết history (không back lại được)
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showLogoutSnack(
+        'Đăng xuất thất bại, vui lòng thử lại',
+        isSuccess: false,
+      );
+    }
   }
 
   @override
@@ -132,7 +171,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 24),
                   _LogoutCard(
-                    onLogout: () => context.read<AuthController>().logout(),
+                    onLogout: _handleLogout,
                   ),
                 ],
               ),
