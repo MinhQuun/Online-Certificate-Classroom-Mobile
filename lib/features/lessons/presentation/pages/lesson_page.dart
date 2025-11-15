@@ -1,8 +1,11 @@
+import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
+import 'package:video_player/video_player.dart';
 
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
+import 'package:cert_classroom_mobile/features/home/presentation/controllers/home_navigation_controller.dart';
 import 'package:cert_classroom_mobile/features/lessons/data/models/lesson.dart';
 import 'package:cert_classroom_mobile/features/lessons/presentation/controllers/lesson_controller.dart';
 import 'package:cert_classroom_mobile/shared/widgets/error_view.dart';
@@ -67,11 +70,7 @@ class _LessonContent extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
             children: [
-              _VideoSection(
-                coverImage: detail?.course?.coverImage,
-                title: title,
-                lesson: detail?.lesson,
-              ),
+              _LessonVideoPlayer(detail: detail, title: title),
               const SizedBox(height: 20),
               Text(
                 title,
@@ -243,63 +242,164 @@ class _BackCircleButton extends StatelessWidget {
   }
 }
 
-class _VideoSection extends StatelessWidget {
-  const _VideoSection({
-    required this.coverImage,
-    required this.title,
-    this.lesson,
-  });
+class _LessonVideoPlayer extends StatefulWidget {
+  const _LessonVideoPlayer({required this.detail, required this.title});
 
-  final String? coverImage;
+  final LessonDetail? detail;
   final String title;
-  final LessonInfo? lesson;
+
+  @override
+  State<_LessonVideoPlayer> createState() => _LessonVideoPlayerState();
+}
+
+class _LessonVideoPlayerState extends State<_LessonVideoPlayer> {
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
+
+  LessonDetail? get detail => widget.detail;
+
+  bool get _isLocked {
+    final permissions = detail?.permissions;
+    if (permissions == null) return false;
+    return permissions.canAccess != true && permissions.isPreview != true;
+  }
+
+  bool get _isPreview {
+    final permissions = detail?.permissions;
+    return permissions?.isPreview == true;
+  }
+
+  String? get _videoUrl {
+    final materials = detail?.materials ?? [];
+    for (final material in materials) {
+      final mime = material.mimeType?.toLowerCase();
+      final type = material.type.toLowerCase();
+      if ((mime?.startsWith('video/') ?? false) || type == 'video') {
+        return material.url;
+      }
+    }
+    return null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    if (_isLocked) return;
+    final url = _videoUrl;
+    if (url == null) return;
+    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+    await controller.initialize();
+    _videoController = controller;
+    _chewieController = ChewieController(
+      videoPlayerController: controller,
+      autoPlay: false,
+      looping: false,
+      allowMuting: true,
+    );
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final coverImage = detail?.course?.coverImage;
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: AppGradients.primary,
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (coverImage != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Image.network(coverImage!, fit: BoxFit.cover),
-              ),
-            Center(
-              child: IconButton(
-                icon: const Icon(
-                  Icons.play_circle_outline,
-                  color: Colors.white,
-                  size: 72,
-                ),
-                onPressed: () {
-                  // open lesson video url if backend provides it later
-                },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: AppColors.primarySoft.withValues(alpha: 0.3),
+            ),
+            child:
+                _chewieController != null && !_isLocked
+                    ? ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Chewie(controller: _chewieController!),
+                    )
+                    : coverImage != null
+                    ? ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.network(coverImage, fit: BoxFit.cover),
+                    )
+                    : const Center(
+                      child: Icon(Icons.play_circle_outline, size: 64),
+                    ),
+          ),
+          Positioned(
+            bottom: 12,
+            left: 16,
+            right: 16,
+            child: Text(
+              widget.title,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
               ),
             ),
+          ),
+          if (_isPreview)
             Positioned(
-              bottom: 12,
-              left: 20,
-              right: 20,
-              child: Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: Colors.white),
+              top: 16,
+              right: 16,
+              child: Chip(
+                label: const Text('Xem thử'),
+                backgroundColor: AppColors.successTint,
+                labelStyle: const TextStyle(color: AppColors.success),
               ),
             ),
-            if (lesson?.type != null)
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Chip(label: Text(lesson!.type!.toUpperCase())),
-              ),
+          if (_isLocked) const _LockedOverlay(),
+        ],
+      ),
+    );
+  }
+}
+
+class _LockedOverlay extends StatelessWidget {
+  const _LockedOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.black.withValues(alpha: 0.7),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline, color: Colors.white, size: 48),
+            const SizedBox(height: 12),
+            const Text(
+              'Kích hoạt khóa học để xem toàn bộ bài học',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).maybePop();
+                context.read<HomeNavigationController>().select(
+                  HomeTab.account,
+                );
+              },
+              child: const Text('Nhập mã kích hoạt'),
+            ),
           ],
         ),
       ),

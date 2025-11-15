@@ -10,22 +10,27 @@ class AppColors {
   static const Color surface = Colors.white;
   static const Color text = Color(0xFF0F172A);
   static const Color muted = Color(0xFF64748B);
+  static const Color success = Color(0xFF10B981);
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color danger = Color(0xFFEF4444);
+  static const Color info = Color(0xFFF97316);
+  static const Color successTint = Color(0x2610B981);
+  static const Color warningTint = Color(0x33F59E0B);
+  static const Color dangerTint = Color(0x33EF4444);
+  static const Color infoTint = Color(0x33F97316);
 
-  static const MaterialColor primarySwatch = MaterialColor(
-    0xFF2563EB,
-    {
-      50: Color(0xFFE8EEFF),
-      100: Color(0xFFC6D6FF),
-      200: Color(0xFF9FB8FF),
-      300: Color(0xFF7297FF),
-      400: Color(0xFF4F7CFA),
-      500: Color(0xFF2563EB),
-      600: Color(0xFF1E55D5),
-      700: Color(0xFF1A49B5),
-      800: Color(0xFF163C95),
-      900: Color(0xFF112A66),
-    },
-  );
+  static const MaterialColor primarySwatch = MaterialColor(0xFF2563EB, {
+    50: Color(0xFFE8EEFF),
+    100: Color(0xFFC6D6FF),
+    200: Color(0xFF9FB8FF),
+    300: Color(0xFF7297FF),
+    400: Color(0xFF4F7CFA),
+    500: Color(0xFF2563EB),
+    600: Color(0xFF1E55D5),
+    700: Color(0xFF1A49B5),
+    800: Color(0xFF163C95),
+    900: Color(0xFF112A66),
+  });
 }
 
 class AppGradients {
@@ -86,7 +91,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Color(0xFFE2E8F0)),

@@ -33,7 +33,7 @@ class AuthRepository {
 
     final token = data['access_token']?.toString();
     if (token == null || token.isEmpty) {
-      throw ApiException('Khong nhan duoc access token tu may chu.');
+      throw ApiException('Không nhận được access token từ máy chủ.');
     }
     await _persistToken(token);
 

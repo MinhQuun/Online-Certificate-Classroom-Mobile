@@ -8,12 +8,19 @@ class CoursesApi {
   Future<List<Map<String, dynamic>>> getCourses({
     int page = 1,
     int perPage = 20,
+    String? search,
+    int? categoryId,
+    String? categorySlug,
   }) async {
     final response = await _client.get(
       '/courses',
       queryParameters: {
         'page': page.toString(),
         'per_page': perPage.toString(),
+        if (search != null && search.isNotEmpty) 'search': search,
+        if (categoryId != null) 'category_id': categoryId.toString(),
+        if (categorySlug != null && categorySlug.isNotEmpty)
+          'category': categorySlug,
       },
     );
     return _extractList(response);

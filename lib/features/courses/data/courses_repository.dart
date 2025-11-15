@@ -6,8 +6,20 @@ class CoursesRepository {
 
   final CoursesApi _api;
 
-  Future<List<CourseSummary>> getCourses({int page = 1, int perPage = 20}) async {
-    final data = await _api.getCourses(page: page, perPage: perPage);
+  Future<List<CourseSummary>> getCourses({
+    int page = 1,
+    int perPage = 20,
+    String? search,
+    int? categoryId,
+    String? categorySlug,
+  }) async {
+    final data = await _api.getCourses(
+      page: page,
+      perPage: perPage,
+      search: search,
+      categoryId: categoryId,
+      categorySlug: categorySlug,
+    );
     return data.map(CourseSummary.fromJson).toList();
   }
 

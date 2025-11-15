@@ -43,10 +43,10 @@ class ProfileController extends ChangeNotifier {
     notifyListeners();
     try {
       profile = await _repository.updateProfile(input);
-      successMessage = 'Cap nhat thanh cong';
+      successMessage = 'Cập nhật thành công';
       return true;
     } catch (e) {
-      errorMessage = 'Cap nhat that bai';
+      errorMessage = 'Cập nhật thất bại';
       return false;
     } finally {
       isSaving = false;

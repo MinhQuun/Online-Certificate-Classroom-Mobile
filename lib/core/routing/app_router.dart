@@ -30,7 +30,7 @@ class AppRouter {
         final lessonArgs =
             args is LessonPageArgs
                 ? args
-                : LessonPageArgs(lessonId: 0, title: 'Bai hoc');
+                : LessonPageArgs(lessonId: 0, title: 'Bài học');
         return _build(settings, LessonPage(args: lessonArgs));
       default:
         return _build(

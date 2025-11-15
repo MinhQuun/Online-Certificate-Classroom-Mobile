@@ -72,7 +72,7 @@ class LessonInfo {
   factory LessonInfo.fromJson(Map<String, dynamic> json) {
     return LessonInfo(
       id: _parseInt(json['id']),
-      title: json['title']?.toString() ?? 'Bai hoc',
+      title: json['title']?.toString() ?? 'Bài học',
       description: json['description']?.toString(),
       order: _parseInt(json['order']),
       type: json['type']?.toString(),
@@ -100,7 +100,7 @@ class LessonCourse {
   factory LessonCourse.fromJson(Map<String, dynamic> json) {
     return LessonCourse(
       id: _parseInt(json['id']),
-      title: json['title']?.toString() ?? 'Khoa hoc',
+      title: json['title']?.toString() ?? 'Khóa học',
       coverImage: json['cover_image']?.toString(),
       lessonsTotal: _parseInt(json['lessons_total']),
       teacherName: json['teacher']?['name']?.toString(),
@@ -123,7 +123,7 @@ class LessonChapter {
   factory LessonChapter.fromJson(Map<String, dynamic> json) {
     return LessonChapter(
       id: _parseInt(json['id']),
-      title: json['title']?.toString() ?? 'Chuong',
+      title: json['title']?.toString() ?? 'Chương',
       lessonsCount: _parseInt(json['lessons_count']),
     );
   }
@@ -151,7 +151,7 @@ class LessonMaterial {
   factory LessonMaterial.fromJson(Map<String, dynamic> json) {
     return LessonMaterial(
       id: _parseInt(json['id']),
-      title: json['title']?.toString() ?? 'Tai lieu',
+      title: json['title']?.toString() ?? 'Tài liệu',
       type: json['type']?.toString() ?? 'file',
       url:
           json['download_url']?.toString() ??

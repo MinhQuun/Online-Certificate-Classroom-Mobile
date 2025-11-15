@@ -1,37 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:cert_classroom_mobile/core/network/api_exceptions.dart';
 import 'package:cert_classroom_mobile/core/routing/app_router.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
+import 'package:cert_classroom_mobile/core/utils/formatters.dart';
+import 'package:cert_classroom_mobile/features/courses/data/models/combo.dart';
 import 'package:cert_classroom_mobile/features/courses/data/models/course.dart';
 import 'package:cert_classroom_mobile/features/courses/presentation/controllers/courses_controller.dart';
 import 'package:cert_classroom_mobile/features/courses/presentation/pages/course_detail_page.dart';
+import 'package:cert_classroom_mobile/features/home/presentation/controllers/home_navigation_controller.dart';
+import 'package:cert_classroom_mobile/shared/controllers/student_session_controller.dart';
 import 'package:cert_classroom_mobile/shared/widgets/error_view.dart';
 import 'package:cert_classroom_mobile/shared/widgets/loading_indicator.dart';
 
-class CoursesPage extends StatelessWidget {
+class CoursesPage extends StatefulWidget {
   const CoursesPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CoursesController()..loadCourses(),
-      child: const _CoursesContent(),
-    );
-  }
+  State<CoursesPage> createState() => _CoursesPageState();
 }
 
-class _CoursesContent extends StatefulWidget {
-  const _CoursesContent();
-
-  @override
-  State<_CoursesContent> createState() => _CoursesContentState();
-}
-
-class _CoursesContentState extends State<_CoursesContent> {
+class _CoursesPageState extends State<CoursesPage> {
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+  String _searchKeyword = '';
   String? _selectedCategory;
+  final Set<int> _pendingCourses = {};
+  final Set<int> _pendingCombos = {};
 
   @override
   void dispose() {
@@ -39,103 +34,313 @@ class _CoursesContentState extends State<_CoursesContent> {
     super.dispose();
   }
 
+  Future<void> _onRefresh(
+    CoursesController controller,
+    StudentSessionController session,
+  ) async {
+    await controller.loadCourses(refresh: true, search: _searchKeyword);
+    await session.refreshAll(force: true);
+  }
+
+  void _onSearchSubmitted(CoursesController controller) {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _searchKeyword = _searchController.text.trim();
+    });
+    controller.loadCourses(search: _searchKeyword, refresh: true);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<CoursesController>(
-      builder: (context, controller, _) {
-        if (controller.isLoading && controller.courses.isEmpty) {
-          return const LoadingIndicator(message: 'Đang tải khóa học...');
-        }
-        if (controller.errorMessage != null && controller.courses.isEmpty) {
-          return ErrorView(
-            title: 'Không thể tải danh sách',
-            message: controller.errorMessage,
-            onRetry: controller.loadCourses,
-          );
-        }
-        if (controller.courses.isEmpty) {
-          return _EmptyState(
-            title: 'Chưa có khóa học',
-            message: 'Danh mục hiện tại chưa có nội dung. Thử quay lại sau.',
-            onRetry: controller.loadCourses,
-          );
-        }
+    return ChangeNotifierProvider(
+      create: (_) => CoursesController()..loadCourses(),
+      child: Consumer2<CoursesController, StudentSessionController>(
+        builder: (context, controller, session, _) {
+          final homeNav = context.read<HomeNavigationController>();
+          if (controller.isLoading && controller.courses.isEmpty) {
+            return const LoadingIndicator(message: 'Đang tải khóa học...');
+          }
+          if (controller.errorMessage != null && controller.courses.isEmpty) {
+            return ErrorView(
+              title: 'Không thể tải danh sách',
+              message: controller.errorMessage,
+              onRetry: () => controller.loadCourses(refresh: true),
+            );
+          }
+          if (controller.courses.isEmpty) {
+            return _EmptyState(
+              onRetry: () => controller.loadCourses(refresh: true),
+            );
+          }
 
-        final categories = _buildCategories(controller.courses);
-        final filtered = _filterCourses(controller.courses);
+          final categories =
+              controller.courses
+                  .map((course) => course.categoryName)
+                  .whereType<String>()
+                  .toSet()
+                  .toList()
+                ..sort();
 
-        return RefreshIndicator(
-          onRefresh: () => controller.loadCourses(refresh: true),
-          color: AppColors.primary,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            slivers: [
-              SliverToBoxAdapter(
-                child: _CoursesHero(
-                  totalCourses: controller.courses.length,
-                  searchController: _searchController,
-                  onSearchChanged: (value) {
-                    setState(() => _searchQuery = value.trim().toLowerCase());
-                  },
-                ),
-              ),
-              if (categories.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: _CategoryChips(
-                    categories: categories,
-                    selected: _selectedCategory,
-                    onSelected: (value) {
-                      setState(() {
-                        if (value == null) {
-                          _selectedCategory = null;
-                        } else {
-                          _selectedCategory =
-                              _selectedCategory == value ? null : value;
-                        }
-                      });
-                    },
-                  ),
-                ),
-              if (controller.isLoading)
-                const SliverToBoxAdapter(child: _InlineLoader()),
-              if (filtered.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _EmptyState(
-                    title: 'Không tìm thấy khóa học',
-                    message: 'Thử đổi từ khóa hoặc danh mục khác.',
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                  sliver: SliverGrid(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final course = filtered[index];
-                      return _CourseCard(
-                        course: course,
-                        onTap: () {
-                          Navigator.of(context).pushNamed(
-                            AppRouter.courseDetail,
-                            arguments: CourseDetailArgs(
-                              courseId: course.id,
-                              initialCourse: course,
-                            ),
-                          );
-                        },
-                      );
-                    }, childCount: filtered.length),
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 420,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 0.80,
+          const orderedCategories = [
+            'TOEIC Foundation (405-600)',
+            'TOEIC Intermediate (605-780)',
+            'TOEIC Advanced (785-990)',
+          ];
+
+          categories.sort((a, b) {
+            final indexA = orderedCategories.indexOf(a);
+            final indexB = orderedCategories.indexOf(b);
+            if (indexA == -1 && indexB == -1) {
+              return a.compareTo(b);
+            } else if (indexA == -1) {
+              return 1;
+            } else if (indexB == -1) {
+              return -1;
+            }
+            return indexA.compareTo(indexB);
+          });
+
+          final filteredCourses =
+              controller.courses
+                  .map(
+                    (course) =>
+                        course.copyWithState(session.stateForCourse(course.id)),
+                  )
+                  .where(
+                    (course) =>
+                        _selectedCategory == null ||
+                        course.categoryName == _selectedCategory,
+                  )
+                  .where(
+                    (course) =>
+                        _searchKeyword.isEmpty ||
+                        course.title.toLowerCase().contains(
+                          _searchKeyword.toLowerCase(),
+                        ) ||
+                        (course.shortDescription ?? '').toLowerCase().contains(
+                          _searchKeyword.toLowerCase(),
                         ),
+                  )
+                  .toList();
+
+          filteredCourses.sort((a, b) {
+            final catA = a.categoryName ?? '';
+            final catB = b.categoryName ?? '';
+            final indexA = orderedCategories.indexOf(catA);
+            final indexB = orderedCategories.indexOf(catB);
+
+            if (indexA != indexB) {
+              if (indexA == -1 && indexB == -1) {
+                return catA.compareTo(catB);
+              } else if (indexA == -1) {
+                return 1;
+              } else if (indexB == -1) {
+                return -1;
+              }
+              return indexA.compareTo(indexB);
+            } else {
+              return a.title.compareTo(b.title);
+            }
+          });
+
+          return RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: () => _onRefresh(controller, session),
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _CoursesHero(
+                    totalCourses: controller.courses.length,
+                    cartCount: session.cartCount,
+                    searchController: _searchController,
+                    onSearch: () => _onSearchSubmitted(controller),
                   ),
                 ),
+                if (controller.combos.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _CombosSection(
+                      combos: controller.combos,
+                      pendingIds: _pendingCombos,
+                      onAdd: (combo) => _handleAddCombo(combo, session),
+                    ),
+                  ),
+                if (categories.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _CategoryFilter(
+                      categories: categories,
+                      selected: _selectedCategory,
+                      onSelected: (value) {
+                        setState(() => _selectedCategory = value);
+                      },
+                    ),
+                  ),
+                if (controller.isLoading)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: LinearProgressIndicator(),
+                    ),
+                  ),
+                if (filteredCourses.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          'Không tìm thấy khóa học nào phù hợp. Hãy thử một từ khóa khác.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 360,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
+                            childAspectRatio: 0.75,
+                          ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final course = filteredCourses[index];
+                        final isBusy = _pendingCourses.contains(course.id);
+                        return _CourseCard(
+                          course: course,
+                          isBusy: isBusy,
+                          onTap: () {
+                            Navigator.of(context).pushNamed(
+                              AppRouter.courseDetail,
+                              arguments: CourseDetailArgs(
+                                courseId: course.id,
+                                initialCourse: course,
+                              ),
+                            );
+                          },
+                          onAction:
+                              () => _handleCourseCta(course, session, homeNav),
+                        );
+                      }, childCount: filteredCourses.length),
+                    ),
+                  ),
+                const SliverToBoxAdapter(child: SizedBox(height: 48)),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _handleCourseCta(
+    CourseSummary course,
+    StudentSessionController session,
+    HomeNavigationController nav,
+  ) async {
+    final state = course.userState;
+    if (state == CourseUserState.addable) {
+      setState(() => _pendingCourses.add(course.id));
+      try {
+        final result = await session.addCourseToCart(course.id);
+        if (mounted) {
+          _showSnack(
+            result.message ?? 'Đã thêm khóa học vào giỏ hàng',
+            success: result.isSuccess,
+          );
+        }
+      } on ApiException catch (error) {
+        if (!mounted) return;
+        _showSnack(error.message, success: false);
+      } catch (_) {
+        if (!mounted) return;
+        _showSnack('Thao tác thất bại', success: false);
+      } finally {
+        if (mounted) {
+          setState(() => _pendingCourses.remove(course.id));
+        }
+      }
+      return;
+    }
+
+    if (state == CourseUserState.inCart) {
+      nav.select(HomeTab.cart);
+      return;
+    }
+
+    if (state == CourseUserState.pendingActivation) {
+      _showPendingSheet(nav);
+      return;
+    }
+
+    nav.select(HomeTab.learning);
+  }
+
+  Future<void> _handleAddCombo(
+    CourseCombo combo,
+    StudentSessionController session,
+  ) async {
+    setState(() => _pendingCombos.add(combo.id));
+    try {
+      final result = await session.addComboToCart(combo.id);
+      if (!mounted) return;
+      _showSnack(
+        result.message ?? 'Đã thêm combo vào giỏ hàng',
+        success: result.isSuccess,
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      _showSnack(error.message, success: false);
+    } catch (_) {
+      if (!mounted) return;
+      _showSnack('Không thể thêm combo', success: false);
+    } finally {
+      if (mounted) {
+        setState(() => _pendingCombos.remove(combo.id));
+      }
+    }
+  }
+
+  void _showPendingSheet(HomeNavigationController nav) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Khóa học chờ kích hoạt',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Bạn đã thanh toán khóa học này. Vui lòng nhập mã kích hoạt được gửi qua email để bắt đầu học.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  nav.select(HomeTab.account);
+                },
+                icon: const Icon(Icons.vpn_key),
+                label: const Text('Nhập mã kích hoạt'),
+              ),
             ],
           ),
         );
@@ -143,144 +348,92 @@ class _CoursesContentState extends State<_CoursesContent> {
     );
   }
 
-  List<String> _buildCategories(List<CourseSummary> courses) {
-    final set = <String>{};
-
-    for (final course in courses) {
-      final category = course.categoryName?.trim();
-      if (category != null && category.isNotEmpty) {
-        set.add(category);
-      }
-    }
-
-    final list = set.toList();
-
-    // Hàm phụ: lấy số đầu tiên trong chuỗi, ví dụ "TOEIC Advanced (785-990)" -> 785
-    int _extractStartScore(String s) {
-      final match = RegExp(r'(\d{3,})').firstMatch(s);
-      if (match == null) return 0;
-      return int.tryParse(match.group(1)!) ?? 0;
-    }
-
-    list.sort((a, b) {
-      final aScore = _extractStartScore(a);
-      final bScore = _extractStartScore(b);
-
-      // Nếu bắt được số thì sort theo số
-      if (aScore != 0 || bScore != 0) {
-        return aScore.compareTo(bScore);
-      }
-
-      // Fallback: sort theo chữ cái
-      return a.compareTo(b);
-    });
-
-    return list;
-  }
-
-  List<CourseSummary> _filterCourses(List<CourseSummary> courses) {
-    return courses.where((course) {
-      final matchesCategory =
-          _selectedCategory == null ||
-          (course.categoryName?.toLowerCase() ==
-              _selectedCategory!.toLowerCase());
-      final matchesQuery =
-          _searchQuery.isEmpty ||
-          course.title.toLowerCase().contains(_searchQuery) ||
-          (course.shortDescription?.toLowerCase().contains(_searchQuery) ??
-              false);
-      return matchesCategory && matchesQuery;
-    }).toList();
+  void _showSnack(String message, {bool success = true}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: success ? AppColors.success : AppColors.danger,
+      ),
+    );
   }
 }
 
 class _CoursesHero extends StatelessWidget {
   const _CoursesHero({
     required this.totalCourses,
+    required this.cartCount,
     required this.searchController,
-    required this.onSearchChanged,
+    required this.onSearch,
   });
 
   final int totalCourses;
+  final int cartCount;
   final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onSearch;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
           gradient: AppGradients.primary,
-          borderRadius: BorderRadius.circular(36),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x220F172A),
-              blurRadius: 30,
-              offset: Offset(0, 20),
-            ),
-          ],
+          borderRadius: BorderRadius.all(Radius.circular(32)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                '$totalCourses Khóa học đang mở',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
             Text(
-              'Kho khóa học chuẩn Student Portal',
+              'Online Certificate Classroom',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.white,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Theo lộ trình rõ ràng với mentor đồng hành và bài tập.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.9),
-              ),
+              'Chương trình bám sát năng lực thực tế, mentor đồng hành và bài test chuẩn hoá.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             TextField(
               controller: searchController,
-              onChanged: onSearchChanged,
+              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Tìm kiếm khóa học...',
+                hintText: 'Tìm khóa học IELTS, TOEIC...',
+                hintStyle: const TextStyle(color: Colors.white70),
                 filled: true,
-                fillColor: Colors.white,
-                prefixIcon: const Icon(Icons.search),
+                fillColor: Colors.white.withValues(alpha: 0.2),
+                prefixIcon: const Icon(Icons.search, color: Colors.white),
+                suffixIcon: IconButton(
+                  onPressed: onSearch,
+                  icon: const Icon(Icons.arrow_forward, color: Colors.white),
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 0,
-                ),
               ),
+              onSubmitted: (_) => onSearch(),
             ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: const [
-                _HeroMetaChip(label: 'Tài liệu phong phú'),
-                _HeroMetaChip(label: 'Mentor theo sát'),
-                _HeroMetaChip(label: 'Review exercises'),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                _HeroStat(
+                  label: 'Khóa học',
+                  value: '$totalCourses+',
+                  icon: Icons.menu_book_outlined,
+                ),
+                const SizedBox(width: 16),
+                _HeroStat(
+                  label: 'Trong giỏ hàng',
+                  value: '$cartCount',
+                  icon: Icons.shopping_bag_outlined,
+                ),
               ],
             ),
           ],
@@ -290,27 +443,199 @@ class _CoursesHero extends StatelessWidget {
   }
 }
 
-class _HeroMetaChip extends StatelessWidget {
-  const _HeroMetaChip({required this.label});
+class _HeroStat extends StatelessWidget {
+  const _HeroStat({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   final String label;
+  final String value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white24),
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              // Add this Expanded to constrain the Column horizontally
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Text(
+                    label,
+                    style: const TextStyle(color: Colors.white70),
+                    maxLines:
+                        2, // Optional: Allow wrapping to 2 lines if needed
+                    overflow:
+                        TextOverflow
+                            .ellipsis, // Optional: Ellipsis for very long text
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Text(label, style: const TextStyle(color: Colors.white)),
     );
   }
 }
 
-class _CategoryChips extends StatelessWidget {
-  const _CategoryChips({
+class _CombosSection extends StatelessWidget {
+  const _CombosSection({
+    required this.combos,
+    required this.onAdd,
+    required this.pendingIds,
+  });
+
+  final List<CourseCombo> combos;
+  final Function(CourseCombo combo) onAdd;
+  final Set<int> pendingIds;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Combo nổi bật',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Text(
+                'Ưu đãi đến ${combos.length} combo',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 210,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (context, index) {
+                final combo = combos[index];
+                final isBusy = pendingIds.contains(combo.id);
+                return _ComboCard(
+                  combo: combo,
+                  isBusy: isBusy,
+                  onAdd: () => onAdd(combo),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemCount: combos.length,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ComboCard extends StatelessWidget {
+  const _ComboCard({
+    required this.combo,
+    required this.isBusy,
+    required this.onAdd,
+  });
+
+  final CourseCombo combo;
+  final bool isBusy;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 260,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                combo.coverImage ??
+                    'https://images.unsplash.com/photo-1551434678-e076c223a692?w=600',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            combo.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${combo.coursesCount ?? 0} khóa học • ${formatCurrency(combo.price?.sale)}',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+          ),
+          const Spacer(),
+          FilledButton.icon(
+            onPressed: isBusy ? null : onAdd,
+            icon:
+                isBusy
+                    ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : const Icon(Icons.shopping_cart),
+            label: Text(isBusy ? 'Đang thêm...' : 'Thêm combo'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryFilter extends StatelessWidget {
+  const _CategoryFilter({
     required this.categories,
     required this.selected,
     required this.onSelected,
@@ -322,76 +647,61 @@ class _CategoryChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = <String>['Tất cả', ...categories];
-
     return SizedBox(
-      height: 46,
+      height: 64,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
+        itemCount: categories.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          final category = items[index];
-          final bool isAll = index == 0;
-
-          final bool isActive = isAll ? selected == null : selected == category;
-
-          return FilterChip(
+          if (index == 0) {
+            return ChoiceChip(
+              label: const Text('Tất cả'),
+              selected: selected == null,
+              onSelected: (_) => onSelected(null),
+            );
+          }
+          final category = categories[index - 1];
+          return ChoiceChip(
             label: Text(category),
-            selected: isActive,
-            onSelected: (_) {
-              if (isAll) {
-                // Chip "Tất cả" -> clear filter
-                onSelected(null);
-              } else {
-                onSelected(category);
-              }
-            },
-            selectedColor: AppColors.primary,
-            labelStyle: TextStyle(
-              color: isActive ? Colors.white : AppColors.text,
-              fontWeight: FontWeight.w600,
-            ),
+            selected: category == selected,
+            onSelected: (_) => onSelected(category),
           );
         },
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemCount: items.length,
       ),
     );
   }
 }
 
-class _InlineLoader extends StatelessWidget {
-  const _InlineLoader();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 12),
-      child: LinearProgressIndicator(minHeight: 4),
-    );
-  }
-}
-
 class _CourseCard extends StatelessWidget {
-  const _CourseCard({required this.course, required this.onTap});
+  const _CourseCard({
+    required this.course,
+    required this.isBusy,
+    required this.onTap,
+    required this.onAction,
+  });
 
   final CourseSummary course;
+  final bool isBusy;
   final VoidCallback onTap;
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(28),
+    final style = _CourseCtaStyle.fromState(course.userState);
+    return GestureDetector(
       onTap: onTap,
-      child: Ink(
+      child: Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x140F172A),
-              blurRadius: 24,
-              offset: Offset(0, 16),
+              color: Color(0x0F000000),
+              blurRadius: 12,
+              offset: Offset(0, 8),
             ),
           ],
         ),
@@ -399,104 +709,88 @@ class _CourseCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(28),
-              ),
+              borderRadius: BorderRadius.circular(20),
               child: AspectRatio(
-                aspectRatio: 4 / 3,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
-                      course.coverImage ??
-                          'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600',
-                      fit: BoxFit.cover,
-                    ),
-                    Positioned(
-                      top: 16,
-                      left: 16,
-                      child:
-                          course.categoryName == null
-                              ? const SizedBox.shrink()
-                              : Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  course.categoryName!,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                    ),
-                  ],
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  course.coverImage ??
+                      'https://images.unsplash.com/photo-1551434678-e076c223a692?w=600',
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      course.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+            const SizedBox(height: 12),
+            if (course.categoryName != null)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  course.categoryName!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.primaryStrong,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            Text(
+              course.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              course.shortDescription ??
+                  'Lộ trình đầy đủ kỹ năng, mentor kèm cặp.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+            ),
+            const Spacer(),
+            Text(
+              formatCurrency(course.price?.sale),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: _GradientButton(
+                gradient: style.gradient,
+                borderRadius: 20,
+                child: TextButton(
+                  onPressed: isBusy ? null : onAction,
+                  style: TextButton.styleFrom(
+                    backgroundColor:
+                        style.gradient == null
+                            ? style.backgroundColor
+                            : Colors.transparent,
+                    foregroundColor: style.foregroundColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    const SizedBox(height: 8),
-                    if (course.shortDescription != null)
-                      Text(
-                        course.shortDescription!,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.muted,
-                        ),
-                      ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.menu_book_outlined,
-                          size: 16,
-                          color: AppColors.muted,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${course.lessonsCount ?? 0} bài',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const Spacer(),
-                        if (course.teacherName != null)
-                          Text(
-                            course.teacherName!,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _PriceTag(price: course.price),
-                        const Spacer(),
-                        FilledButton(
-                          onPressed: onTap,
-                          child: const Text('Xem chi tiết'),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
+                  child:
+                      isBusy
+                          ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : Text(style.label),
                 ),
               ),
             ),
@@ -507,86 +801,109 @@ class _CourseCard extends StatelessWidget {
   }
 }
 
-class _PriceTag extends StatelessWidget {
-  const _PriceTag({this.price});
+class _GradientButton extends StatelessWidget {
+  const _GradientButton({
+    required this.child,
+    this.gradient,
+    this.borderRadius = 16,
+  });
 
-  final CoursePrice? price;
+  final Widget child;
+  final Gradient? gradient;
+  final double borderRadius;
 
   @override
   Widget build(BuildContext context) {
-    if (price == null || price!.sale == null) {
-      return const Text(
-        'Liên hệ',
-        style: TextStyle(fontWeight: FontWeight.w600),
-      );
-    }
-    final currency = price!.currency ?? 'VND';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${price!.sale!.toStringAsFixed(0)} $currency',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
-          ),
-        ),
-        if (price!.original != null && price!.original! > (price!.sale ?? 0))
-          Text(
-            '${price!.original!.toStringAsFixed(0)} $currency',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.muted,
-              decoration: TextDecoration.lineThrough,
-            ),
-          ),
-      ],
+    if (gradient == null) return child;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: gradient!,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: child,
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.title, required this.message, this.onRetry});
+class _CourseCtaStyle {
+  const _CourseCtaStyle({
+    required this.label,
+    required this.foregroundColor,
+    this.backgroundColor,
+    this.gradient,
+  });
 
-  final String title;
-  final String message;
-  final VoidCallback? onRetry;
+  final String label;
+  final Color? backgroundColor;
+  final Color foregroundColor;
+  final Gradient? gradient;
+
+  static _CourseCtaStyle fromState(CourseUserState state) {
+    switch (state) {
+      case CourseUserState.inCart:
+        return _CourseCtaStyle(
+          label: 'Đã trong giỏ hàng',
+          backgroundColor: const Color(0xFFFDE9EF),
+          foregroundColor: const Color(0xFFF43F5E),
+        );
+      case CourseUserState.pendingActivation:
+        return _CourseCtaStyle(
+          label: 'Chờ kích hoạt',
+          backgroundColor: const Color(0xFFFDF6EC),
+          foregroundColor: AppColors.warning,
+        );
+      case CourseUserState.activated:
+        return _CourseCtaStyle(
+          label: 'Đã kích hoạt',
+          backgroundColor: const Color(0xFFE7F8F1),
+          foregroundColor: AppColors.success,
+        );
+      case CourseUserState.addable:
+        return _CourseCtaStyle(
+          label: 'Thêm vào giỏ hàng',
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          gradient: AppGradients.primary,
+        );
+    }
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.onRetry});
+
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.menu_book_outlined,
-              size: 48,
+              Icons.menu_book_rounded,
+              size: 64,
               color: AppColors.primary,
             ),
             const SizedBox(height: 12),
             Text(
-              title,
+              'Chưa có khóa học',
               style: Theme.of(
                 context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
-              message,
+              'Danh mục hiện tại chưa có nội dung. Vui lòng quay lại sau.',
+              textAlign: TextAlign.center,
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
-              textAlign: TextAlign.center,
             ),
-            if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: onRetry,
-                child: const Text('Thử tải lại'),
-              ),
-            ],
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onRetry, child: const Text('Thử tải lại')),
           ],
         ),
       ),

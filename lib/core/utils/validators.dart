@@ -6,17 +6,17 @@ class Validators {
 
   static String? email(String? value) {
     final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return 'Vui long nhap email';
+    if (trimmed.isEmpty) return 'Vui lòng nhập email';
     if (!_emailRegex.hasMatch(trimmed)) {
-      return 'Email khong hop le';
+      return 'Email không hợp lệ';
     }
     return null;
   }
 
   static String? password(String? value) {
-    if (value == null || value.isEmpty) return 'Vui long nhap mat khau';
+    if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu';
     if (value.length < 6) {
-      return 'Mat khau phai tu 6 ky tu';
+      return 'Mật khẩu phải từ 6 ký tự';
     }
     return null;
   }

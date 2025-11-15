@@ -5,17 +5,16 @@ class EnrolledApi {
 
   final ApiClient _client;
 
-  Future<List<Map<String, dynamic>>> getEnrolledCourses() async {
-    final response = await _client.get('/student/courses/enrolled');
+  Future<Map<String, dynamic>> getEnrolledCourses({
+    String status = 'all',
+  }) async {
+    final response = await _client.get(
+      '/student/courses/enrolled',
+      queryParameters: {'status': status},
+    );
     if (response is Map<String, dynamic>) {
-      final data = response['data'];
-      if (data is Map<String, dynamic>) {
-        final items = data['items'];
-        if (items is List) {
-          return items.whereType<Map<String, dynamic>>().toList();
-        }
-      }
+      return response;
     }
-    return const [];
+    return const {};
   }
 }

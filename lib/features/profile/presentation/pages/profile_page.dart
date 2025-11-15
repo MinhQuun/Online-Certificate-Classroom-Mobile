@@ -3,12 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import 'package:cert_classroom_mobile/core/config/app_config.dart';
-import 'package:cert_classroom_mobile/core/routing/app_router.dart';
+import 'package:cert_classroom_mobile/core/network/api_exceptions.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
 import 'package:cert_classroom_mobile/core/utils/validators.dart';
+import 'package:cert_classroom_mobile/features/activation/data/activation_repository.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:cert_classroom_mobile/features/courses/data/models/course.dart';
-import 'package:cert_classroom_mobile/features/courses/presentation/pages/course_detail_page.dart';
 import 'package:cert_classroom_mobile/features/profile/data/models/profile.dart';
 import 'package:cert_classroom_mobile/features/profile/data/models/progress_overview.dart';
 import 'package:cert_classroom_mobile/features/profile/presentation/controllers/profile_controller.dart';
@@ -18,6 +17,7 @@ import 'package:cert_classroom_mobile/shared/widgets/loading_indicator.dart';
 
 import 'package:cert_classroom_mobile/core/utils/custom_snackbar.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:cert_classroom_mobile/shared/controllers/student_session_controller.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -34,10 +34,13 @@ class _ProfilePageState extends State<ProfilePage> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _activationCodeController = TextEditingController();
+  final ActivationRepository _activationRepository = ActivationRepository();
   DateTime? _selectedDob;
   bool _didPopulate = false;
   bool _isEditingProfile = false;
   bool _showPasswordFields = false;
+  bool _isSubmittingActivation = false;
 
   @override
   void dispose() {
@@ -47,6 +50,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
+    _activationCodeController.dispose();
     super.dispose();
   }
 
@@ -56,17 +60,62 @@ class _ProfilePageState extends State<ProfilePage> {
       message: message,
       lottiePath:
           isSuccess
-              ? 'assets/lottie/success.json' // success.json của bạn
-              : 'assets/lottie/error.json', // error.json của bạn
+              ? 'assets/lottie/success.json' 
+              : 'assets/lottie/error.json',
       backgroundColor: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
       textColor: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
     );
   }
 
+  Future<void> _submitActivationCode() async {
+    final code = _activationCodeController.text.trim();
+    if (code.isEmpty) {
+      showCustomSnackbar(
+        context: context,
+        message: 'Vui lòng nhập mã kích hoạt hợp lệ',
+        lottiePath: 'assets/lottie/error.json',
+        backgroundColor: Colors.red.shade50,
+        textColor: Colors.red.shade900,
+      );
+      return;
+    }
+    setState(() => _isSubmittingActivation = true);
+    final session = context.read<StudentSessionController>();
+    try {
+      final result = await _activationRepository.activate(code);
+      if (!mounted) return;
+      _activationCodeController.clear();
+      await session.refreshEnrollments(force: true);
+      await session.refreshCart(force: true);
+      if (!mounted) return;
+      showCustomSnackbar(
+        context: context,
+        message: 'Đã kích hoạt khóa học ${result.courseName}',
+        lottiePath: 'assets/lottie/success.json',
+        backgroundColor: Colors.green.shade50,
+        textColor: Colors.green.shade900,
+      );
+    } on ApiException catch (error) {
+      showCustomSnackbar(
+        context: context,
+        message: error.message,
+        lottiePath: 'assets/lottie/error.json',
+        backgroundColor: Colors.red.shade50,
+        textColor: Colors.red.shade900,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmittingActivation = false);
+      }
+    }
+  }
+
   Future<void> _handleLogout() async {
     try {
-      // Gọi controller để xoá token / session, v.v.
-      await context.read<AuthController>().logout();
+      final auth = context.read<AuthController>();
+      final session = context.read<StudentSessionController>();
+      await auth.logout();
+      session.reset();
 
       if (!mounted) return;
 
@@ -131,30 +180,17 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 20),
 
                   _SectionCard(
-                    title: 'Tiến độ học tập',
-                    subtitle: 'Theo dõi những khóa học đang học',
-                    child: _ProgressSection(
-                      overview: controller.progress,
-                      isLoading: controller.isProgressLoading,
-                      errorMessage: controller.progressError,
-                      onCourseTap:
-                          (snapshot) => _openCourseDetail(context, snapshot),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  _SectionCard(
                     title: 'Mã kích hoạt',
-                    subtitle: 'Kích hoạt khóa học bằng mã đã mua',
-                    child: _PortalTile(
-                      icon: Icons.qr_code_2,
-                      title: 'Sử dụng mã kích hoạt',
-                      description:
-                          'Nhập mã để mở khóa học ngay trên cổng thông tin.',
-                      actionLabel: 'Mở trang kích hoạt',
-                      onTap: () => _openPortal('student/activation-codes'),
+                    subtitle: 'Nhập mã để mở khóa khóa học đã mua',
+                    child: _ActivationCard(
+                      controller: _activationCodeController,
+                      isSubmitting: _isSubmittingActivation,
+                      onSubmit: _submitActivationCode,
+                      onPortalTap:
+                          () => _openPortal('student/activation-codes'),
                     ),
                   ),
+
                   const SizedBox(height: 16),
 
                   _SectionCard(
@@ -433,29 +469,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _openCourseDetail(
-    BuildContext context,
-    CourseProgressSnapshot snapshot,
-  ) {
-    Navigator.of(context).pushNamed(
-      AppRouter.courseDetail,
-      arguments: CourseDetailArgs(
-        courseId: snapshot.courseId,
-        initialCourse: CourseSummary(
-          id: snapshot.courseId,
-          title: snapshot.title,
-          slug: snapshot.slug,
-          coverImage: snapshot.coverImage,
-          shortDescription: null,
-          price: null,
-          lessonsCount:
-              snapshot.lessonsTotal == 0 ? null : snapshot.lessonsTotal,
-          teacherName: snapshot.teacherName,
-          categoryName: snapshot.categoryName,
-        ),
-      ),
-    );
-  }
 }
 
 class _ProfileHeader extends StatelessWidget {
@@ -696,157 +709,6 @@ class _HighlightTile extends StatelessWidget {
   }
 }
 
-class _ProgressSection extends StatelessWidget {
-  const _ProgressSection({
-    required this.overview,
-    required this.isLoading,
-    required this.errorMessage,
-    required this.onCourseTap,
-  });
-
-  final ProgressOverview? overview;
-  final bool isLoading;
-  final String? errorMessage;
-  final void Function(CourseProgressSnapshot snapshot) onCourseTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: LoadingIndicator(message: 'Đang tải tiến độ...'),
-      );
-    }
-
-    if (overview == null) {
-      return Text(
-        errorMessage ?? 'Chưa có khóa học nào đang học.',
-        style: Theme.of(context).textTheme.bodyMedium,
-      );
-    }
-
-    if (overview!.courses.isEmpty) {
-      return Text(
-        'Bắt đầu học để theo dõi tiến độ tại đây.',
-        style: Theme.of(context).textTheme.bodyMedium,
-      );
-    }
-
-    return Column(
-      children:
-          overview!.courses.take(3).map((snapshot) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _ProgressCourseCard(
-                snapshot: snapshot,
-                onTap: () => onCourseTap(snapshot),
-              ),
-            );
-          }).toList(),
-    );
-  }
-}
-
-class _ProgressCourseCard extends StatelessWidget {
-  const _ProgressCourseCard({required this.snapshot, required this.onTap});
-
-  final CourseProgressSnapshot snapshot;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(24),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.network(
-                snapshot.coverImage ??
-                    'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400',
-                width: 90,
-                height: 90,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (snapshot.categoryName != null)
-                    Text(
-                      snapshot.categoryName!.toUpperCase(),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        letterSpacing: 1.1,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  Text(
-                    snapshot.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: snapshot.overallPercent / 100,
-                    minHeight: 8,
-                    backgroundColor: AppColors.primarySoft.withValues(
-                      alpha: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Text(
-                        '${snapshot.overallPercent}% hoàn thành',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const Spacer(),
-                      if (snapshot.bestMiniTestScore != null)
-                        Text(
-                          'Minitest: ${snapshot.bestMiniTestScore!.toStringAsFixed(1)}',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.muted),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      if (snapshot.lessonsTotal > 0)
-                        Text(
-                          '${snapshot.lessonsDone}/${snapshot.lessonsTotal} bài',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      const Spacer(),
-                      FilledButton.icon(
-                        onPressed: onTap,
-                        icon: const Icon(Icons.play_circle_outline),
-                        label: const Text('Mở khóa'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _PortalTile extends StatelessWidget {
   const _PortalTile({
     required this.icon,
@@ -900,6 +762,47 @@ class _PortalTile extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActivationCard extends StatelessWidget {
+  const _ActivationCard({
+    required this.controller,
+    required this.isSubmitting,
+    required this.onSubmit,
+    required this.onPortalTap,
+  });
+
+  final TextEditingController controller;
+  final bool isSubmitting;
+  final VoidCallback onSubmit;
+  final VoidCallback onPortalTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Nhập mã kích hoạt',
+            prefixIcon: Icon(Icons.qr_code),
+          ),
+        ),
+        const SizedBox(height: 12),
+        AppButton(
+          label: 'Kích hoạt khóa học',
+          isLoading: isSubmitting,
+          onPressed: isSubmitting ? null : onSubmit,
+        ),
+        TextButton.icon(
+          onPressed: onPortalTap,
+          icon: const Icon(Icons.open_in_new),
+          label: const Text('Xem hướng dẫn kích hoạt'),
         ),
       ],
     );

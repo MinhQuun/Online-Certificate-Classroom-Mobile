@@ -488,7 +488,7 @@ class _RegisterPanel extends StatelessWidget {
           const SizedBox(height: 24),
 
           Text(
-            'Sau khi bấm đăng ký, hệ thống sẽ mở trang web Study Space để bạn hoàn tất thông tin.',
+            'Sau khi bấm đăng ký, hệ thống sẽ mở trang web để bạn hoàn tất thông tin.',
             style: bodyStyle,
           ),
           const SizedBox(height: 16),

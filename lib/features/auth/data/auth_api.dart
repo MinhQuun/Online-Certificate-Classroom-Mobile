@@ -41,7 +41,7 @@ class AuthApi {
       }
       return <String, dynamic>{};
     }
-    throw ApiException('Phan hoi khong hop le tu may chu');
+    throw ApiException('Phản hồi không hợp lệ từ máy chủ');
   }
 
   void _ensureSuccess(dynamic response) {
@@ -49,11 +49,11 @@ class AuthApi {
       final status = response['status']?.toString();
       if (status != null && status != 'success') {
         final message =
-            response['message']?.toString() ?? 'Yeu cau that bai, thu lai sau.';
+            response['message']?.toString() ?? 'Yêu cầu thất bại, thử lại sau.';
         throw ApiException(message);
       }
       return;
     }
-    throw ApiException('Phan hoi khong hop le tu may chu');
+    throw ApiException('Phản hồi không hợp lệ từ máy chủ');
   }
 }

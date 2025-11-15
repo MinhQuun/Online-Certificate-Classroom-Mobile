@@ -1,3 +1,5 @@
+enum CourseUserState { addable, inCart, pendingActivation, activated }
+
 class CourseSummary {
   const CourseSummary({
     required this.id,
@@ -9,6 +11,7 @@ class CourseSummary {
     this.lessonsCount,
     this.teacherName,
     this.categoryName,
+    this.userState = CourseUserState.addable,
   });
 
   final int id;
@@ -20,12 +23,13 @@ class CourseSummary {
   final int? lessonsCount;
   final String? teacherName;
   final String? categoryName;
+  final CourseUserState userState;
 
   factory CourseSummary.fromJson(Map<String, dynamic> json) {
     final priceJson = json['price'];
     return CourseSummary(
       id: _parseInt(json['id']),
-      title: json['title']?.toString() ?? 'Khoa hoc',
+      title: json['title']?.toString() ?? 'Khóa học',
       slug: json['slug']?.toString(),
       coverImage:
           json['cover_image']?.toString() ??
@@ -33,10 +37,28 @@ class CourseSummary {
           json['image']?.toString(),
       shortDescription: json['short_description']?.toString(),
       price:
-          priceJson is Map<String, dynamic> ? CoursePrice.fromJson(priceJson) : null,
+          priceJson is Map<String, dynamic>
+              ? CoursePrice.fromJson(priceJson)
+              : null,
       lessonsCount: _parseInt(json['lessons_count']),
       teacherName: json['teacher']?['name']?.toString(),
       categoryName: json['category']?['name']?.toString(),
+      userState: CourseUserState.addable,
+    );
+  }
+
+  CourseSummary copyWithState(CourseUserState nextState) {
+    return CourseSummary(
+      id: id,
+      title: title,
+      slug: slug,
+      coverImage: coverImage,
+      shortDescription: shortDescription,
+      price: price,
+      lessonsCount: lessonsCount,
+      teacherName: teacherName,
+      categoryName: categoryName,
+      userState: nextState,
     );
   }
 }
@@ -51,6 +73,11 @@ class CourseDetail {
     this.categoryName,
     this.teacherName,
     this.chapters = const [],
+    this.durationDays,
+    this.startDate,
+    this.endDate,
+    this.miniTests = const [],
+    this.promotion,
   });
 
   final int id;
@@ -61,11 +88,16 @@ class CourseDetail {
   final String? categoryName;
   final String? teacherName;
   final List<CourseChapter> chapters;
+  final int? durationDays;
+  final String? startDate;
+  final String? endDate;
+  final List<CourseMiniTest> miniTests;
+  final CoursePromotion? promotion;
 
   factory CourseDetail.fromJson(Map<String, dynamic> json) {
     return CourseDetail(
       id: _parseInt(json['id']),
-      title: json['title']?.toString() ?? 'Khoa hoc',
+      title: json['title']?.toString() ?? 'Khóa học',
       description: json['description']?.toString(),
       coverImage:
           json['cover_image']?.toString() ??
@@ -82,6 +114,20 @@ class CourseDetail {
               .whereType<Map<String, dynamic>>()
               .map(CourseChapter.fromJson)
               .toList(),
+      durationDays: _parseInt(json['duration_days']),
+      startDate: json['start_date']?.toString(),
+      endDate: json['end_date']?.toString(),
+      miniTests:
+          (json['mini_tests'] as List<dynamic>? ?? [])
+              .whereType<Map<String, dynamic>>()
+              .map(CourseMiniTest.fromJson)
+              .toList(),
+      promotion:
+          json['active_promotion'] is Map<String, dynamic>
+              ? CoursePromotion.fromJson(
+                json['active_promotion'] as Map<String, dynamic>,
+              )
+              : null,
     );
   }
 }
@@ -120,7 +166,7 @@ class CourseChapter {
   factory CourseChapter.fromJson(Map<String, dynamic> json) {
     return CourseChapter(
       id: _parseInt(json['id']),
-      title: json['title']?.toString() ?? 'Chuong',
+      title: json['title']?.toString() ?? 'Chương',
       order: _parseInt(json['order']),
       lessons:
           (json['lessons'] as List<dynamic>? ?? [])
@@ -147,9 +193,64 @@ class CourseLessonSummary {
   factory CourseLessonSummary.fromJson(Map<String, dynamic> json) {
     return CourseLessonSummary(
       id: _parseInt(json['id']),
-      title: json['title']?.toString() ?? 'Bai hoc',
+      title: json['title']?.toString() ?? 'Bài học',
       order: _parseInt(json['order']),
       type: json['type']?.toString(),
+    );
+  }
+}
+
+class CourseMiniTest {
+  const CourseMiniTest({
+    required this.id,
+    required this.title,
+    this.order,
+    this.skill,
+    this.timeLimit,
+    this.attemptsAllowed,
+  });
+
+  final int id;
+  final String title;
+  final int? order;
+  final String? skill;
+  final int? timeLimit;
+  final int? attemptsAllowed;
+
+  factory CourseMiniTest.fromJson(Map<String, dynamic> json) {
+    return CourseMiniTest(
+      id: _parseInt(json['id']),
+      title: json['title']?.toString() ?? 'Mini test',
+      order: _parseInt(json['order']),
+      skill: json['skill']?.toString(),
+      timeLimit: _parseInt(json['time_limit']),
+      attemptsAllowed: _parseInt(json['attempts_allowed']),
+    );
+  }
+}
+
+class CoursePromotion {
+  const CoursePromotion({
+    required this.id,
+    this.name,
+    this.type,
+    this.value,
+    this.expiresAt,
+  });
+
+  final int id;
+  final String? name;
+  final String? type;
+  final double? value;
+  final String? expiresAt;
+
+  factory CoursePromotion.fromJson(Map<String, dynamic> json) {
+    return CoursePromotion(
+      id: _parseInt(json['id']),
+      name: json['name']?.toString(),
+      type: json['type']?.toString(),
+      value: _parseDouble(json['value']),
+      expiresAt: json['expires_at']?.toString(),
     );
   }
 }

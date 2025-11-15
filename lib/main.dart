@@ -5,6 +5,8 @@ import 'package:cert_classroom_mobile/core/config/app_config.dart';
 import 'package:cert_classroom_mobile/core/routing/app_router.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:cert_classroom_mobile/features/home/presentation/controllers/home_navigation_controller.dart';
+import 'package:cert_classroom_mobile/shared/controllers/student_session_controller.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +22,12 @@ class OnlineCertificateApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<AuthController>(
           create: (_) => AuthController(),
+        ),
+        ChangeNotifierProvider<StudentSessionController>(
+          create: (_) => StudentSessionController(),
+        ),
+        ChangeNotifierProvider<HomeNavigationController>(
+          create: (_) => HomeNavigationController(),
         ),
       ],
       child: MaterialApp(

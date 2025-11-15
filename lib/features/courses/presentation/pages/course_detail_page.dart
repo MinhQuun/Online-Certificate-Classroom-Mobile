@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:cert_classroom_mobile/core/network/api_exceptions.dart';
 import 'package:cert_classroom_mobile/core/routing/app_router.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
+import 'package:cert_classroom_mobile/core/utils/formatters.dart';
 import 'package:cert_classroom_mobile/features/courses/data/models/course.dart';
 import 'package:cert_classroom_mobile/features/courses/presentation/controllers/course_detail_controller.dart';
+import 'package:cert_classroom_mobile/features/home/presentation/controllers/home_navigation_controller.dart';
 import 'package:cert_classroom_mobile/features/lessons/presentation/pages/lesson_page.dart';
-import 'package:cert_classroom_mobile/shared/widgets/app_button.dart';
+import 'package:cert_classroom_mobile/shared/controllers/student_session_controller.dart';
 import 'package:cert_classroom_mobile/shared/widgets/error_view.dart';
 import 'package:cert_classroom_mobile/shared/widgets/loading_indicator.dart';
 
@@ -32,8 +35,8 @@ class _CourseDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CourseDetailController>(
-      builder: (context, controller, _) {
+    return Consumer2<CourseDetailController, StudentSessionController>(
+      builder: (context, controller, session, _) {
         final detail = controller.detail;
         final placeholder = CourseDetail(
           id: args.courseId,
@@ -43,6 +46,7 @@ class _CourseDetailContent extends StatelessWidget {
           chapters: const [],
         );
         final data = detail ?? placeholder;
+        final ctaState = session.stateForCourse(data.id);
 
         if (controller.isLoading && detail == null) {
           return const Scaffold(
@@ -67,145 +71,56 @@ class _CourseDetailContent extends StatelessWidget {
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
-                  child: _CourseHero(
+                  child: _DetailHero(
                     detail: data,
                     onBack: () => Navigator.of(context).maybePop(),
                   ),
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            if (data.categoryName != null)
-                              _InfoPill(
-                                icon: Icons.category_outlined,
-                                label: data.categoryName!,
-                              ),
-                            if (data.teacherName != null)
-                              _InfoPill(
-                                icon: Icons.person_outline,
-                                label: data.teacherName!,
-                              ),
-                            if (data.price?.sale != null)
-                              _InfoPill(
-                                icon: Icons.sell_outlined,
-                                label:
-                                    '${data.price!.sale!.toStringAsFixed(0)} ${data.price!.currency ?? 'VND'}',
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        if (data.description != null)
-                          Text(
-                            data.description!,
-                            style: Theme.of(context).textTheme.bodyLarge
-                                ?.copyWith(color: AppColors.muted),
-                          ),
-                        const SizedBox(height: 28),
-                        Text(
-                          'Nội dung khóa học',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _CourseInfo(detail: data),
                   ),
                 ),
-                if (data.chapters.isEmpty)
-                  const SliverToBoxAdapter(
+                if (data.miniTests.isNotEmpty)
+                  SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Text('Chưa có dữ liệu bài học'),
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                      child: _MiniTestsSection(tests: data.miniTests),
                     ),
-                  )
-                else
-                  SliverList.separated(
-                    itemCount: data.chapters.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 20),
-                    itemBuilder: (context, index) {
-                      final chapter = data.chapters[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              chapter.title,
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 12),
-                            ...chapter.lessons.map(
-                              (lesson) => Card(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: AppColors.primarySoft
-                                        .withValues(alpha: 0.2),
-                                    child: const Icon(
-                                      Icons.play_arrow,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                  title: Text(lesson.title),
-                                  subtitle:
-                                      lesson.type == null
-                                          ? null
-                                          : Text(lesson.type!.toUpperCase()),
-                                  trailing: const Icon(Icons.chevron_right),
-                                  onTap: () {
-                                    Navigator.of(context).pushNamed(
-                                      AppRouter.lesson,
-                                      arguments: LessonPageArgs(
-                                        lessonId: lesson.id,
-                                        title: lesson.title,
-                                        courseName: data.title,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
                   ),
-                const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                  sliver: _ChaptersSection(detail: data),
+                ),
               ],
             ),
           ),
-          bottomNavigationBar: Padding(
-            padding: const EdgeInsets.all(20),
-            child: AppButton(
-              label: 'Vào bài học đầu tiên',
-              onPressed:
-                  data.chapters.isEmpty
-                      ? null
-                      : () {
-                        final firstLesson =
-                            data.chapters.expand((c) => c.lessons).firstOrNull;
-                        if (firstLesson == null) return;
-                        Navigator.of(context).pushNamed(
-                          AppRouter.lesson,
-                          arguments: LessonPageArgs(
-                            lessonId: firstLesson.id,
-                            title: firstLesson.title,
-                            courseName: data.title,
-                          ),
-                        );
-                      },
-            ),
+          bottomNavigationBar: _DetailActionBar(
+            detail: data,
+            state: ctaState,
+            onOpenLesson: () => _openFirstLesson(context, data),
           ),
         );
       },
+    );
+  }
+
+  void _openFirstLesson(BuildContext context, CourseDetail detail) {
+    final firstLesson =
+        detail.chapters.isEmpty
+            ? null
+            : detail.chapters.first.lessons.isEmpty
+            ? null
+            : detail.chapters.first.lessons.first;
+    if (firstLesson == null) return;
+    Navigator.of(context).pushNamed(
+      AppRouter.lesson,
+      arguments: LessonPageArgs(
+        lessonId: firstLesson.id,
+        title: firstLesson.title,
+        courseName: detail.title,
+      ),
     );
   }
 }
@@ -226,8 +141,8 @@ class CourseDetailArgs {
   }
 }
 
-class _CourseHero extends StatelessWidget {
-  const _CourseHero({required this.detail, required this.onBack});
+class _DetailHero extends StatelessWidget {
+  const _DetailHero({required this.detail, required this.onBack});
 
   final CourseDetail detail;
   final VoidCallback onBack;
@@ -242,24 +157,21 @@ class _CourseHero extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 16 / 9,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    detail.coverImage ??
-                        'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800',
-                    fit: BoxFit.cover,
+              child: Image.network(
+                detail.coverImage ??
+                    'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800',
+                fit: BoxFit.cover,
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.black54, Colors.transparent],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
                   ),
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.black54, Colors.transparent],
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
             Positioned(
@@ -268,40 +180,14 @@ class _CourseHero extends StatelessWidget {
               child: _HeroButton(icon: Icons.arrow_back, onTap: onBack),
             ),
             Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.black87, Colors.transparent],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      detail.title,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (detail.teacherName != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        detail.teacherName!,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                      ),
-                    ],
-                  ],
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: Text(
+                detail.title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -309,6 +195,267 @@ class _CourseHero extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _CourseInfo extends StatelessWidget {
+  const _CourseInfo({required this.detail});
+
+  final CourseDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (detail.categoryName != null)
+              _InfoPill(
+                icon: Icons.category_outlined,
+                label: detail.categoryName!,
+              ),
+            if (detail.teacherName != null)
+              _InfoPill(icon: Icons.person_outline, label: detail.teacherName!),
+            if (detail.durationDays != null && detail.durationDays! > 0)
+              _InfoPill(
+                icon: Icons.calendar_today_outlined,
+                label: '${detail.durationDays} ngày học',
+              ),
+            if (detail.chapters.isNotEmpty)
+              _InfoPill(
+                icon: Icons.menu_book_outlined,
+                label: '${detail.chapters.length} chương',
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (detail.price?.sale != null)
+          Text(
+            formatCurrency(detail.price?.sale),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        if (detail.description != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            detail.description!,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+          ),
+        ],
+        if (detail.promotion != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.warningTint,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.local_offer_outlined,
+                  color: AppColors.warning,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Ưu đãi: ${detail.promotion!.name ?? 'Giảm giá'} - hết hạn ${detail.promotion!.expiresAt ?? 'sắp tới'}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: AppColors.warning),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MiniTestsSection extends StatelessWidget {
+  const _MiniTestsSection({required this.tests});
+
+  final List<CourseMiniTest> tests;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Mini test',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        ...tests.map(
+          (test) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.quiz_outlined),
+            title: Text(test.title),
+            subtitle: Text(
+              '${test.skill ?? 'Kỹ năng tổng hợp'} • ${test.timeLimit ?? 0} phút',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChaptersSection extends StatelessWidget {
+  const _ChaptersSection({required this.detail});
+
+  final CourseDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    if (detail.chapters.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Text(
+          'Chưa có nội dung bài học.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+    final previewLessonId =
+        detail.chapters.isEmpty
+            ? null
+            : detail.chapters.first.lessons.isEmpty
+            ? null
+            : detail.chapters.first.lessons.first.id;
+    return SliverList.separated(
+      itemBuilder: (context, index) {
+        final chapter = detail.chapters[index];
+        return ExpansionTile(
+          title: Text(
+            chapter.title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          children:
+              chapter.lessons.map((lesson) {
+                final isPreview = lesson.id == previewLessonId;
+                return ListTile(
+                  leading: Icon(
+                    isPreview ? Icons.visibility_outlined : Icons.lock_outline,
+                    color: isPreview ? AppColors.success : AppColors.muted,
+                  ),
+                  title: Text(lesson.title),
+                  subtitle: Text(
+                    isPreview ? 'Xem thử miễn phí' : 'Yêu cầu kích hoạt',
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pushNamed(
+                      AppRouter.lesson,
+                      arguments: LessonPageArgs(
+                        lessonId: lesson.id,
+                        title: lesson.title,
+                        courseName: detail.title,
+                      ),
+                    );
+                  },
+                );
+              }).toList(),
+        );
+      },
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemCount: detail.chapters.length,
+    );
+  }
+}
+
+class _DetailActionBar extends StatelessWidget {
+  const _DetailActionBar({
+    required this.detail,
+    required this.state,
+    required this.onOpenLesson,
+  });
+
+  final CourseDetail detail;
+  final CourseUserState state;
+  final VoidCallback onOpenLesson;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.read<StudentSessionController>();
+    final nav = context.read<HomeNavigationController>();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x11000000),
+            blurRadius: 18,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: () => _handleAction(context, session, nav),
+          child: Text(_labelForState(state)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAction(
+    BuildContext context,
+    StudentSessionController session,
+    HomeNavigationController nav,
+  ) async {
+    try {
+      switch (state) {
+        case CourseUserState.addable:
+          await session.addCourseToCart(detail.id);
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Đã thêm vào giỏ hàng')));
+          break;
+        case CourseUserState.inCart:
+          nav.select(HomeTab.cart);
+          break;
+        case CourseUserState.pendingActivation:
+          nav.select(HomeTab.account);
+          break;
+        case CourseUserState.activated:
+          onOpenLesson();
+          break;
+      }
+    } on ApiException catch (error) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  String _labelForState(CourseUserState state) {
+    switch (state) {
+      case CourseUserState.addable:
+        return 'Thêm vào giỏ hàng';
+      case CourseUserState.inCart:
+        return 'Đến giỏ hàng';
+      case CourseUserState.pendingActivation:
+        return 'Kích hoạt ngay';
+      case CourseUserState.activated:
+        return 'Vào học ngay';
+    }
   }
 }
 
@@ -348,8 +495,4 @@ class _InfoPill extends StatelessWidget {
       ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
     );
   }
-}
-
-extension IterableX<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
 }

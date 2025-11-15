@@ -72,7 +72,7 @@ class CourseProgressSnapshot {
 
     return CourseProgressSnapshot(
       courseId: _parseInt(course['id']),
-      title: course['title']?.toString() ?? 'Khoa hoc',
+      title: course['title']?.toString() ?? 'Khóa học',
       slug: course['slug']?.toString(),
       coverImage: course['cover']?.toString(),
       categoryName: category?['name']?.toString(),

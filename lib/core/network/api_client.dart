@@ -9,11 +9,9 @@ import 'package:cert_classroom_mobile/core/network/api_exceptions.dart';
 typedef TokenProvider = Future<String?> Function();
 
 class ApiClient {
-  ApiClient({
-    http.Client? httpClient,
-    TokenProvider? tokenProvider,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _tokenProvider = tokenProvider;
+  ApiClient({http.Client? httpClient, TokenProvider? tokenProvider})
+    : _httpClient = httpClient ?? http.Client(),
+      _tokenProvider = tokenProvider;
 
   final http.Client _httpClient;
   final TokenProvider? _tokenProvider;
@@ -67,6 +65,19 @@ class ApiClient {
     );
   }
 
+  Future<dynamic> delete(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) {
+    return _request(
+      method: 'DELETE',
+      path: path,
+      queryParameters: queryParameters,
+      headers: headers,
+    );
+  }
+
   Future<dynamic> _request({
     required String method,
     required String path,
@@ -97,6 +108,9 @@ class ApiClient {
             body: body == null ? null : jsonEncode(body),
           );
           break;
+        case 'DELETE':
+          response = await _httpClient.delete(uri, headers: requestHeaders);
+          break;
         default:
           throw ApiException('HTTP method $method is not supported');
       }
@@ -121,14 +135,12 @@ class ApiClient {
 
     Map<String, String>? finalQuery;
     if (cleanedQuery != null) {
-      finalQuery = cleanedQuery.map(
-        (key, value) => MapEntry(key, value ?? ''),
-      );
+      finalQuery = cleanedQuery.map((key, value) => MapEntry(key, value ?? ''));
     }
 
-    return Uri.parse('${AppConfig.baseUrl}$normalizedPath').replace(
-      queryParameters: finalQuery,
-    );
+    return Uri.parse(
+      '${AppConfig.baseUrl}$normalizedPath',
+    ).replace(queryParameters: finalQuery);
   }
 
   Future<Map<String, String>> _buildHeaders(Map<String, String>? extra) async {
@@ -169,8 +181,8 @@ class ApiClient {
     if (decoded is Map<String, dynamic>) {
       return decoded['message']?.toString() ??
           decoded['error']?.toString() ??
-          'Yeu cau that bai, vui long thu lai.';
+          'Yêu cầu thất bại, vui lòng thử lại.';
     }
-    return 'Yeu cau that bai, vui long thu lai.';
+    return 'Yêu cầu thất bại, vui lòng thử lại.';
   }
 }
