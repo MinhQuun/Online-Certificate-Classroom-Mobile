@@ -12,6 +12,12 @@ class CoursesController extends ChangeNotifier {
   }) : _repository = repository ?? CoursesRepository(),
        _combosRepository = combosRepository ?? CombosRepository();
 
+  static const List<String> _comboPreferredOrder = [
+    'TOEIC Foundation Full Pack (405-600)',
+    'TOEIC Intermediate Full Pack (605-780)',
+    'TOEIC Advanced Full Pack (785-990)',
+  ];
+
   final CoursesRepository _repository;
   final CombosRepository _combosRepository;
 
@@ -28,7 +34,8 @@ class CoursesController extends ChangeNotifier {
     try {
       courses = await _repository.getCourses(search: search);
       try {
-        combos = await _combosRepository.getCombos(perPage: 6);
+        final fetched = await _combosRepository.getCombos(perPage: 6);
+        combos = _sortCombos(fetched);
       } catch (_) {
         combos = const [];
       }
@@ -38,5 +45,20 @@ class CoursesController extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  List<CourseCombo> _sortCombos(List<CourseCombo> combos) {
+    final sorted = [...combos];
+    sorted.sort((a, b) {
+      final idxA = _comboPreferredOrder.indexOf(a.name);
+      final idxB = _comboPreferredOrder.indexOf(b.name);
+      if (idxA != idxB) {
+        final safeA = idxA == -1 ? _comboPreferredOrder.length : idxA;
+        final safeB = idxB == -1 ? _comboPreferredOrder.length : idxB;
+        if (safeA != safeB) return safeA.compareTo(safeB);
+      }
+      return a.name.compareTo(b.name);
+    });
+    return sorted;
   }
 }
