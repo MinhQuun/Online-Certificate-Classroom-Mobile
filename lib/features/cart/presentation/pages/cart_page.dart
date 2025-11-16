@@ -48,11 +48,15 @@ class _CartView extends StatelessWidget {
                 _SelectionBar(controller: controller, snapshot: snapshot),
                 Expanded(
                   child: RefreshIndicator(
+                    color: AppColors.primary,
                     onRefresh:
                         () => context
                             .read<StudentSessionController>()
                             .refreshCart(force: true),
                     child: ListView(
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
                       children: [
                         ...snapshot.courses.map(
@@ -636,34 +640,48 @@ class _CartEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.shopping_bag_outlined,
-                size: 64,
-                color: AppColors.primary,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Giỏ hàng đang trống',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Hãy khám phá các khóa học và combo để bắt đầu hành trình học tập.',
-                textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
-              ),
-            ],
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () => context.read<StudentSessionController>().refreshCart(force: true),
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
           ),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 64,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Giỏ hàng đang trống',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Hãy khám phá các khóa học và combo để bắt đầu hành trình học tập.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

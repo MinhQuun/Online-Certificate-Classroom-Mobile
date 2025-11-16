@@ -53,13 +53,12 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       message: message,
       lottiePath:
-          isSuccess
-              ? 'assets/lottie/success.json' 
-              : 'assets/lottie/error.json',
+          isSuccess ? 'assets/lottie/success.json' : 'assets/lottie/error.json',
       backgroundColor: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
       textColor: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
     );
   }
+
   Future<void> _handleLogout() async {
     try {
       final auth = context.read<AuthController>();
@@ -110,47 +109,53 @@ class _ProfilePageState extends State<ProfilePage> {
 
           return SafeArea(
             bottom: false,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _ProfileHeader(
-                    fullName: profile?.fullName ?? 'Sinh viên',
-                    email: profile?.email ?? '',
-                  ),
-                  const SizedBox(height: 20),
-
-                  _ProgressHighlights(
-                    overview: controller.progress,
-                    isLoading: controller.isProgressLoading,
-                    errorMessage: controller.progressError,
-                  ),
-                  const SizedBox(height: 20),
-
-                  _SectionCard(
-                    title: 'Lịch sử đơn hàng',
-                    subtitle: 'Xem lại các giao dịch đã thanh toán',
-                    child: _PortalTile(
-                      icon: Icons.receipt_long_outlined,
-                      title: 'Theo dõi đơn hàng',
-                      description:
-                          'Quản lý hóa đơn và tình trạng thanh toán nhanh chóng.',
-                      actionLabel: 'Xem đơn hàng',
-                      onTap: () => _openPortal('student/order-history'),
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () => controller.loadProfile(refresh: true),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _ProfileHeader(
+                      fullName: profile?.fullName ?? 'Sinh viên',
+                      email: profile?.email ?? '',
                     ),
-                  ),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                  _SectionCard(
-                    title: 'Trang cá nhân',
-                    subtitle: 'Thông tin liên hệ & bảo mật tài khoản',
-                    child: _buildProfileForm(controller),
-                  ),
-                  const SizedBox(height: 24),
-                  _LogoutCard(onLogout: _handleLogout),
-                ],
+                    _ProgressHighlights(
+                      overview: controller.progress,
+                      isLoading: controller.isProgressLoading,
+                      errorMessage: controller.progressError,
+                    ),
+                    const SizedBox(height: 20),
+
+                    _SectionCard(
+                      title: 'Lịch sử đơn hàng',
+                      subtitle: 'Xem lại các giao dịch đã thanh toán',
+                      child: _PortalTile(
+                        icon: Icons.receipt_long_outlined,
+                        title: 'Theo dõi đơn hàng',
+                        description:
+                            'Quản lý hóa đơn và tình trạng thanh toán nhanh chóng.',
+                        actionLabel: 'Xem đơn hàng',
+                        onTap: () => _openPortal('student/order-history'),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    _SectionCard(
+                      title: 'Trang cá nhân',
+                      subtitle: 'Thông tin liên hệ & bảo mật tài khoản',
+                      child: _buildProfileForm(controller),
+                    ),
+                    const SizedBox(height: 24),
+                    _LogoutCard(onLogout: _handleLogout),
+                  ],
+                ),
               ),
             ),
           );
@@ -412,7 +417,6 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
   }
-
 }
 
 class _ProfileHeader extends StatelessWidget {
@@ -711,7 +715,6 @@ class _PortalTile extends StatelessWidget {
     );
   }
 }
-
 
 class _LogoutCard extends StatelessWidget {
   const _LogoutCard({required this.onLogout});

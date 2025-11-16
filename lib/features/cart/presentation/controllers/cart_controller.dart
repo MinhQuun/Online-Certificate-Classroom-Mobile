@@ -34,6 +34,27 @@ class CartController extends ChangeNotifier {
   bool get hasSelection =>
       selectedCourseIds.isNotEmpty || selectedComboIds.isNotEmpty;
 
+  /// Tổng tiền đang hiển thị (ưu tiên các item đã chọn)
+  num get selectedTotal {
+    if (!hasSelection) return 0;
+
+    num total = 0;
+
+    for (final course in snapshot.courses) {
+      if (selectedCourseIds.contains(course.id)) {
+        total += course.price;
+      }
+    }
+
+    for (final combo in snapshot.combos) {
+      if (selectedComboIds.contains(combo.id)) {
+        total += combo.price;
+      }
+    }
+
+    return total;
+  }
+
   void toggleCourse(int courseId) {
     if (selectedCourseIds.contains(courseId)) {
       selectedCourseIds.remove(courseId);

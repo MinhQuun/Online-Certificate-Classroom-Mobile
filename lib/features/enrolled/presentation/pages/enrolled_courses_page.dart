@@ -89,6 +89,9 @@ class _EnrolledView extends StatelessWidget {
               ),
           color: AppColors.primary,
           child: CustomScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
             slivers: [
               SliverToBoxAdapter(
                 child: _EnrolledHeader(summary: controller.summary),

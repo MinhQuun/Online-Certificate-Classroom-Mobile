@@ -20,7 +20,7 @@ class ProfileController extends ChangeNotifier {
   ProgressOverview? progress;
 
   Future<void> loadProfile({bool refresh = false}) async {
-    if (isLoading) return;
+    if (isLoading && !refresh) return;
     isLoading = true;
     errorMessage = null;
     notifyListeners();
@@ -32,7 +32,7 @@ class ProfileController extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
-    await loadProgressOverview();
+    await loadProgressOverview(refresh: refresh);
   }
 
   Future<bool> updateProfile(ProfileUpdateInput input) async {
@@ -54,8 +54,8 @@ class ProfileController extends ChangeNotifier {
     }
   }
 
-  Future<void> loadProgressOverview() async {
-    if (isProgressLoading) return;
+  Future<void> loadProgressOverview({bool refresh = false}) async {
+    if (isProgressLoading && !refresh) return;
     isProgressLoading = true;
     progressError = null;
     notifyListeners();
