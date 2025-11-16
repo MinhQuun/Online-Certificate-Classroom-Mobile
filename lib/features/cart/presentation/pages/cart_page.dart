@@ -148,7 +148,9 @@ class _SelectionBar extends StatelessWidget {
           const Spacer(),
           TextButton.icon(
             onPressed:
-                controller.hasSelection ? controller.removeSelected : null,
+                controller.hasSelection
+                    ? () => _handleRemoveSelected(context, selectedCount)
+                    : null,
             icon: const Icon(Icons.delete_outline),
             label: Text(
               'Xóa ($selectedCount)',
@@ -163,6 +165,36 @@ class _SelectionBar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _handleRemoveSelected(
+    BuildContext context,
+    int selectedCount,
+  ) async {
+    try {
+      await controller.removeSelected();
+      if (!context.mounted) return;
+      final message =
+          selectedCount > 1
+              ? 'Đã xóa $selectedCount sản phẩm khỏi giỏ hàng'
+              : 'Đã xóa sản phẩm khỏi giỏ hàng';
+      showCustomSnackbar(
+        context: context,
+        message: message,
+        lottiePath: 'assets/lottie/success.json',
+        backgroundColor: Colors.green.shade50,
+        textColor: Colors.green.shade900,
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      showCustomSnackbar(
+        context: context,
+        message: error.toString(),
+        lottiePath: 'assets/lottie/error.json',
+        backgroundColor: Colors.red.shade50,
+        textColor: Colors.red.shade900,
+      );
+    }
   }
 }
 
@@ -227,13 +259,36 @@ class _CourseTile extends StatelessWidget {
               ),
             ),
             IconButton(
-              onPressed: () => controller.removeCourse(item.id),
+              onPressed: () => _removeCourse(context),
               icon: const Icon(Icons.close),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _removeCourse(BuildContext context) async {
+    try {
+      await controller.removeCourse(item.id);
+      if (!context.mounted) return;
+      showCustomSnackbar(
+        context: context,
+        message: 'Đã xóa "${item.title}" khỏi giỏ hàng',
+        lottiePath: 'assets/lottie/success.json',
+        backgroundColor: Colors.green.shade50,
+        textColor: Colors.green.shade900,
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      showCustomSnackbar(
+        context: context,
+        message: error.toString(),
+        lottiePath: 'assets/lottie/error.json',
+        backgroundColor: Colors.red.shade50,
+        textColor: Colors.red.shade900,
+      );
+    }
   }
 }
 
@@ -297,13 +352,36 @@ class _ComboTile extends StatelessWidget {
               ),
             ),
             IconButton(
-              onPressed: () => controller.removeCombo(item.id),
+              onPressed: () => _removeCombo(context),
               icon: const Icon(Icons.close),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _removeCombo(BuildContext context) async {
+    try {
+      await controller.removeCombo(item.id);
+      if (!context.mounted) return;
+      showCustomSnackbar(
+        context: context,
+        message: 'Đã xóa combo "${item.title}" khỏi giỏ hàng',
+        lottiePath: 'assets/lottie/success.json',
+        backgroundColor: Colors.green.shade50,
+        textColor: Colors.green.shade900,
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      showCustomSnackbar(
+        context: context,
+        message: error.toString(),
+        lottiePath: 'assets/lottie/error.json',
+        backgroundColor: Colors.red.shade50,
+        textColor: Colors.red.shade900,
+      );
+    }
   }
 }
 
@@ -642,7 +720,10 @@ class _CartEmptyState extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
         color: AppColors.primary,
-        onRefresh: () => context.read<StudentSessionController>().refreshCart(force: true),
+        onRefresh:
+            () => context.read<StudentSessionController>().refreshCart(
+              force: true,
+            ),
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
@@ -664,17 +745,16 @@ class _CartEmptyState extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(
                         'Giỏ hàng đang trống',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Hãy khám phá các khóa học và combo để bắt đầu hành trình học tập.',
                         textAlign: TextAlign.center,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.muted,
+                        ),
                       ),
                     ],
                   ),
