@@ -38,14 +38,24 @@ void showCustomSnackbar({
           ),
         ],
       ),
-      action:
-          (actionLabel != null && onActionPressed != null)
-              ? SnackBarAction(
-                label: actionLabel!,
-                textColor: textColor,
-                onPressed: onActionPressed!,
-              )
-              : null,
+      action: _buildAction(
+        actionLabel: actionLabel,
+        onActionPressed: onActionPressed,
+        textColor: textColor,
+      ),
     ),
+  );
+}
+
+SnackBarAction? _buildAction({
+  String? actionLabel,
+  VoidCallback? onActionPressed,
+  required Color textColor,
+}) {
+  if (actionLabel == null || onActionPressed == null) return null;
+  return SnackBarAction(
+    label: actionLabel,
+    textColor: textColor,
+    onPressed: onActionPressed,
   );
 }

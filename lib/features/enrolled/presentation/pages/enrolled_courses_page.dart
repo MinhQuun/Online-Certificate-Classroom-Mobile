@@ -9,20 +9,37 @@ import 'package:cert_classroom_mobile/features/courses/presentation/pages/course
 import 'package:cert_classroom_mobile/features/enrolled/data/models/enrolled_course.dart';
 import 'package:cert_classroom_mobile/features/enrolled/data/models/enrolled_response.dart';
 import 'package:cert_classroom_mobile/features/enrolled/presentation/controllers/enrolled_controller.dart';
-import 'package:cert_classroom_mobile/features/home/presentation/controllers/home_navigation_controller.dart';
 import 'package:cert_classroom_mobile/shared/widgets/error_view.dart';
 import 'package:cert_classroom_mobile/shared/widgets/loading_indicator.dart';
 
-class EnrolledCoursesPage extends StatelessWidget {
+class EnrolledCoursesPage extends StatefulWidget {
   const EnrolledCoursesPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => EnrolledController()..loadEnrolled(),
-      child: const _EnrolledView(),
-    );
+  State<EnrolledCoursesPage> createState() => _EnrolledCoursesPageState();
+}
+
+class _EnrolledCoursesPageState extends State<EnrolledCoursesPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final controller = context.read<EnrolledController>();
+      if (!controller.hasLoaded && !controller.isLoading) {
+        controller.loadEnrolled();
+      }
+    });
   }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return const _EnrolledView();
+  }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class _EnrolledView extends StatelessWidget {
@@ -32,10 +49,23 @@ class _EnrolledView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<EnrolledController>(
       builder: (context, controller, _) {
-        if (controller.isLoading && controller.courses.isEmpty) {
-          return const LoadingIndicator(
-            message: 'Đang tải khóa học của bạn...',
-          );
+        if (!controller.hasLoaded) {
+          if (controller.isLoading) {
+            return const LoadingIndicator(
+              message: 'Đang tải khóa học của bạn...',
+            );
+          }
+          if (controller.errorMessage != null) {
+            return ErrorView(
+              title: 'Không thể tải danh sách',
+              message: controller.errorMessage,
+              onRetry:
+                  () => controller.loadEnrolled(
+                    status: controller.activeFilter,
+                    refresh: true,
+                  ),
+            );
+          }
         }
         if (controller.errorMessage != null && controller.courses.isEmpty) {
           return ErrorView(
@@ -256,7 +286,7 @@ class _EnrollmentCard extends StatelessWidget {
       case 'ACTIVE':
         return 'Tiếp tục học';
       case 'PENDING':
-        return 'Kích hoạt ngay';
+        return 'Đang xử lý';
       case 'EXPIRED':
         return 'Xem chi tiết';
       default:
@@ -280,10 +310,6 @@ class _EnrollmentCard extends StatelessWidget {
       );
       return;
     }
-    if (status == 'PENDING') {
-      context.read<HomeNavigationController>().select(HomeTab.account);
-      return;
-    }
     Navigator.of(context).pushNamed(
       AppRouter.courseDetail,
       arguments: CourseDetailArgs(courseId: summary.id, initialCourse: summary),
@@ -302,8 +328,8 @@ class _ProgressSection extends StatelessWidget {
     if (!isActive) {
       return Text(
         course.status.toUpperCase() == 'PENDING'
-            ? 'Khóa học đang chờ kích hoạt. Vui lòng nhập mã kích hoạt đã được gửi tới email của bạn.'
-            : 'Khóa học đã hết hạn. Hãy gia hạn hoặc đăng ký lại để tiếp tục.',
+            ? 'Khóa học của bạn đang được xử lý. Chúng tôi sẽ mở quyền truy cập ngay khi hoàn tất.'
+            : 'Khóa học đã hết hạn. Vui lòng gia hạn hoặc đăng ký lại để tiếp tục.',
         style: Theme.of(
           context,
         ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
@@ -358,7 +384,7 @@ class _StatusChip extends StatelessWidget {
       case 'PENDING':
         bg = AppColors.warningTint;
         fg = AppColors.warning;
-        label = 'Chờ kích hoạt';
+        label = 'Đang xử lý';
         break;
       case 'EXPIRED':
         bg = AppColors.dangerTint;

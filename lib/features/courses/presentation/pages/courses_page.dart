@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:cert_classroom_mobile/core/network/api_exceptions.dart';
 import 'package:cert_classroom_mobile/core/routing/app_router.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
+import 'package:cert_classroom_mobile/core/utils/custom_snackbar.dart';
 import 'package:cert_classroom_mobile/core/utils/formatters.dart';
 import 'package:cert_classroom_mobile/features/courses/data/models/combo.dart';
 import 'package:cert_classroom_mobile/features/courses/data/models/course.dart';
@@ -273,11 +274,6 @@ class _CoursesPageState extends State<CoursesPage> {
       return;
     }
 
-    if (state == CourseUserState.pendingActivation) {
-      _showPendingSheet(nav);
-      return;
-    }
-
     nav.select(HomeTab.learning);
   }
 
@@ -306,55 +302,14 @@ class _CoursesPageState extends State<CoursesPage> {
     }
   }
 
-  void _showPendingSheet(HomeNavigationController nav) {
-    showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Khóa học chờ kích hoạt',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Bạn đã thanh toán khóa học này. Vui lòng nhập mã kích hoạt được gửi qua email để bắt đầu học.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  nav.select(HomeTab.account);
-                },
-                icon: const Icon(Icons.vpn_key),
-                label: const Text('Nhập mã kích hoạt'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _showSnack(String message, {bool success = true}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: success ? AppColors.success : AppColors.danger,
-      ),
+    showCustomSnackbar(
+      context: context,
+      message: message,
+      lottiePath: success ? 'assets/lottie/success.json' : 'assets/lottie/error.json',
+      backgroundColor: success ? Colors.green.shade50 : Colors.red.shade50,
+      textColor: success ? Colors.green.shade900 : Colors.red.shade900,
     );
   }
 }
@@ -536,7 +491,7 @@ class _CombosSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 210,
+            height: 300,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemBuilder: (context, index) {
@@ -846,15 +801,9 @@ class _CourseCtaStyle {
           backgroundColor: const Color(0xFFFDE9EF),
           foregroundColor: const Color(0xFFF43F5E),
         );
-      case CourseUserState.pendingActivation:
-        return _CourseCtaStyle(
-          label: 'Chờ kích hoạt',
-          backgroundColor: const Color(0xFFFDF6EC),
-          foregroundColor: AppColors.warning,
-        );
       case CourseUserState.activated:
         return _CourseCtaStyle(
-          label: 'Đã kích hoạt',
+          label: 'Đang học',
           backgroundColor: const Color(0xFFE7F8F1),
           foregroundColor: AppColors.success,
         );

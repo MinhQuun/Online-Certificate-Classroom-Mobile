@@ -13,4 +13,19 @@ class LessonsApi {
     }
     return const {};
   }
+
+  Future<Map<String, dynamic>> updateLessonProgress(
+    int lessonId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.put(
+      '/lessons/$lessonId/progress',
+      body: body,
+    );
+    if (response is Map<String, dynamic>) {
+      final data = response['data'];
+      if (data is Map<String, dynamic>) return data;
+    }
+    return const {};
+  }
 }

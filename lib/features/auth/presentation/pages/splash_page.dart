@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:cert_classroom_mobile/core/routing/app_router.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
+import 'package:cert_classroom_mobile/core/utils/custom_snackbar.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/controllers/auth_controller.dart';
 
 class SplashPage extends StatefulWidget {
@@ -33,9 +34,13 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showCustomSnackbar(
+      context: context,
+      message: message,
+      lottiePath: 'assets/lottie/error.json',
+      backgroundColor: Colors.red.shade50,
+      textColor: Colors.red.shade900,
+    );
   }
 
   @override

@@ -25,8 +25,8 @@ class StudentSessionController extends ChangeNotifier {
   String? lastError;
 
   Set<int> _cartCourseIds = {};
-  Set<int> _activeCourseIds = {};
-  Set<int> _pendingCourseIds = {};
+  Set<int> _activatedCourseIds = {};
+  final Map<int, EnrolledCourse> _enrollmentsByCourse = {};
 
   CartSnapshot? get cart => _cart;
   bool get isBootstrapped => _bootstrapped;
@@ -34,6 +34,13 @@ class StudentSessionController extends ChangeNotifier {
   bool get isCartLoading => _cartLoading;
   bool get isEnrollmentLoading => _enrollmentLoading;
   int get cartCount => _cart?.counts.total ?? 0;
+  double? progressPercentForCourse(int courseId) {
+    return _enrollmentsByCourse[courseId]?.percentOverall;
+  }
+
+  CourseLessonSummary? resumeLessonForCourse(int courseId) {
+    return _enrollmentsByCourse[courseId]?.lastLesson;
+  }
 
   Future<void> refreshAll({bool force = false}) async {
     if (_bootstrapped && !force && isLoading) {
@@ -117,11 +124,8 @@ class StudentSessionController extends ChangeNotifier {
   }
 
   CourseUserState stateForCourse(int courseId) {
-    if (_activeCourseIds.contains(courseId)) {
+    if (_activatedCourseIds.contains(courseId)) {
       return CourseUserState.activated;
-    }
-    if (_pendingCourseIds.contains(courseId)) {
-      return CourseUserState.pendingActivation;
     }
     if (_cartCourseIds.contains(courseId)) {
       return CourseUserState.inCart;
@@ -132,8 +136,8 @@ class StudentSessionController extends ChangeNotifier {
   void reset() {
     _cart = null;
     _cartCourseIds = {};
-    _activeCourseIds = {};
-    _pendingCourseIds = {};
+    _activatedCourseIds = {};
+    _enrollmentsByCourse.clear();
     lastError = null;
     _bootstrapped = false;
     notifyListeners();
@@ -146,21 +150,71 @@ class StudentSessionController extends ChangeNotifier {
   }
 
   void _syncEnrollmentSets(List<EnrolledCourse> courses) {
-    final active = <int>{};
-    final pending = <int>{};
+    final activated = <int>{};
+    final mapped = <int, EnrolledCourse>{};
     for (final enrollment in courses) {
       final summary = enrollment.course;
       if (summary == null) continue;
       final courseId = summary.id;
+      mapped[courseId] = enrollment;
       final status = enrollment.status.toUpperCase();
-      if (status == 'ACTIVE') {
-        active.add(courseId);
-      } else if (status == 'PENDING') {
-        pending.add(courseId);
+      if (_isAccessibleStatus(status)) {
+        activated.add(courseId);
       }
     }
-    _activeCourseIds = active;
-    _pendingCourseIds = pending;
+    _activatedCourseIds = activated;
+    _enrollmentsByCourse
+      ..clear()
+      ..addAll(mapped);
     notifyListeners();
+  }
+
+  void updateCourseSnapshot({
+    required int courseId,
+    double? percentOverall,
+    CourseLessonSummary? lastLesson,
+  }) {
+    if (percentOverall == null && lastLesson == null) return;
+    final existing = _enrollmentsByCourse[courseId];
+    if (existing == null) {
+      _enrollmentsByCourse[courseId] = EnrolledCourse(
+        enrollmentId: '$courseId',
+        status: 'ACTIVE',
+        course: CourseSummary(id: courseId, title: 'Khóa học'),
+        percentOverall: percentOverall,
+        percentVideo: null,
+        avgMiniTest: null,
+        lastLesson: lastLesson,
+        timeline: null,
+      );
+    } else {
+      _enrollmentsByCourse[courseId] = EnrolledCourse(
+        enrollmentId: existing.enrollmentId,
+        status: existing.status,
+        course: existing.course,
+        percentOverall: percentOverall ?? existing.percentOverall,
+        percentVideo: existing.percentVideo,
+        avgMiniTest: existing.avgMiniTest,
+        lastLesson: lastLesson ?? existing.lastLesson,
+        timeline: existing.timeline,
+      );
+    }
+    _activatedCourseIds.add(courseId);
+    notifyListeners();
+  }
+
+  bool _isAccessibleStatus(String status) {
+    switch (status) {
+      case 'ACTIVE':
+      case 'OWNED':
+      case 'ENROLLED':
+      case 'IN_PROGRESS':
+      case 'COMPLETED':
+      case 'PENDING':
+      case 'PAID':
+        return true;
+      default:
+        return false;
+    }
   }
 }

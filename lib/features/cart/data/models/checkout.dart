@@ -41,15 +41,11 @@ class CheckoutResult extends CheckoutPreview {
     required super.total,
     required this.paymentMethod,
     this.invoiceId,
-    this.pendingActivationCourses = const [],
-    this.pendingActivationCombos = const [],
     this.alreadyActiveCourses = const [],
   });
 
   final String paymentMethod;
   final String? invoiceId;
-  final List<int> pendingActivationCourses;
-  final List<int> pendingActivationCombos;
   final List<int> alreadyActiveCourses;
 
   factory CheckoutResult.fromJson(Map<String, dynamic> json) {
@@ -69,14 +65,6 @@ class CheckoutResult extends CheckoutPreview {
       total: _parseInt(json['total']),
       paymentMethod: json['payment_method']?.toString() ?? 'qr',
       invoiceId: json['invoice_id']?.toString(),
-      pendingActivationCourses:
-          (json['pending_activation_courses'] as List<dynamic>? ?? [])
-              .map(_parseInt)
-              .toList(),
-      pendingActivationCombos:
-          (json['pending_activation_combos'] as List<dynamic>? ?? [])
-              .map(_parseInt)
-              .toList(),
       alreadyActiveCourses:
           (json['already_active_courses'] as List<dynamic>? ?? [])
               .map(_parseInt)

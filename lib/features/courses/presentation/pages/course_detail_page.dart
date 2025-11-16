@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:cert_classroom_mobile/core/network/api_exceptions.dart';
 import 'package:cert_classroom_mobile/core/routing/app_router.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
+import 'package:cert_classroom_mobile/core/utils/custom_snackbar.dart';
 import 'package:cert_classroom_mobile/core/utils/formatters.dart';
 import 'package:cert_classroom_mobile/features/courses/data/models/course.dart';
 import 'package:cert_classroom_mobile/features/courses/presentation/controllers/course_detail_controller.dart';
@@ -64,6 +65,7 @@ class _CourseDetailContent extends StatelessWidget {
           );
         }
 
+        final resumeLessonId = session.resumeLessonForCourse(data.id)?.id;
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
@@ -82,6 +84,15 @@ class _CourseDetailContent extends StatelessWidget {
                     child: _CourseInfo(detail: data),
                   ),
                 ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: _CourseProgressBanner(
+                      detail: data,
+                      onContinue: () => _openPreferredLesson(context, data),
+                    ),
+                  ),
+                ),
                 if (data.miniTests.isNotEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
@@ -91,7 +102,11 @@ class _CourseDetailContent extends StatelessWidget {
                   ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                  sliver: _ChaptersSection(detail: data),
+                  sliver: _ChaptersSection(
+                    detail: data,
+                    hasFullAccess: ctaState == CourseUserState.activated,
+                    resumeLessonId: resumeLessonId,
+                  ),
                 ),
               ],
             ),
@@ -99,26 +114,32 @@ class _CourseDetailContent extends StatelessWidget {
           bottomNavigationBar: _DetailActionBar(
             detail: data,
             state: ctaState,
-            onOpenLesson: () => _openFirstLesson(context, data),
+            onOpenLesson: () => _openPreferredLesson(context, data),
           ),
         );
       },
     );
   }
 
-  void _openFirstLesson(BuildContext context, CourseDetail detail) {
-    final firstLesson =
-        detail.chapters.isEmpty
-            ? null
-            : detail.chapters.first.lessons.isEmpty
-            ? null
-            : detail.chapters.first.lessons.first;
-    if (firstLesson == null) return;
+  CourseLessonSummary? _firstAvailableLesson(CourseDetail detail) {
+    for (final chapter in detail.chapters) {
+      if (chapter.lessons.isNotEmpty) {
+        return chapter.lessons.first;
+      }
+    }
+    return null;
+  }
+
+  void _openPreferredLesson(BuildContext context, CourseDetail detail) {
+    final session = context.read<StudentSessionController>();
+    final resume = session.resumeLessonForCourse(detail.id);
+    final target = resume ?? _firstAvailableLesson(detail);
+    if (target == null) return;
     Navigator.of(context).pushNamed(
       AppRouter.lesson,
       arguments: LessonPageArgs(
-        lessonId: firstLesson.id,
-        title: firstLesson.title,
+        lessonId: target.id,
+        title: target.title,
         courseName: detail.title,
       ),
     );
@@ -313,10 +334,91 @@ class _MiniTestsSection extends StatelessWidget {
   }
 }
 
-class _ChaptersSection extends StatelessWidget {
-  const _ChaptersSection({required this.detail});
+class _CourseProgressBanner extends StatelessWidget {
+  const _CourseProgressBanner({required this.detail, required this.onContinue});
 
   final CourseDetail detail;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<StudentSessionController>(
+      builder: (context, session, _) {
+        final percent = session.progressPercentForCourse(detail.id);
+        final lastLesson = session.resumeLessonForCourse(detail.id);
+        if (percent == null && lastLesson == null) {
+          return const SizedBox.shrink();
+        }
+        final percentValue = ((percent ?? 0).clamp(0, 100)).toDouble();
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x11000000),
+                blurRadius: 18,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Tiến độ khóa học',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text('${percentValue.toStringAsFixed(0)}%'),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: LinearProgressIndicator(
+                  value: percentValue / 100,
+                  minHeight: 10,
+                ),
+              ),
+              if (lastLesson?.title != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Tiếp tục: ${lastLesson!.title}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                ),
+              ],
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: onContinue,
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('Tiếp tục học'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ChaptersSection extends StatelessWidget {
+  const _ChaptersSection({
+    required this.detail,
+    required this.hasFullAccess,
+    required this.resumeLessonId,
+  });
+
+  final CourseDetail detail;
+  final bool hasFullAccess;
+  final int? resumeLessonId;
 
   @override
   Widget build(BuildContext context) {
@@ -347,25 +449,50 @@ class _ChaptersSection extends StatelessWidget {
           children:
               chapter.lessons.map((lesson) {
                 final isPreview = lesson.id == previewLessonId;
+                final canOpen = hasFullAccess || isPreview;
+                final isResumeTarget =
+                    resumeLessonId != null &&
+                    resumeLessonId == lesson.id &&
+                    hasFullAccess;
+                final icon =
+                    isPreview
+                        ? Icons.visibility_outlined
+                        : canOpen
+                        ? Icons.play_circle_fill
+                        : Icons.lock_outline;
+                final subtitle =
+                    isPreview
+                        ? 'Xem thử miễn phí'
+                        : canOpen
+                        ? (isResumeTarget ? 'Tiếp tục học' : 'Bắt đầu học')
+                        : 'Cần mua khóa học';
                 return ListTile(
                   leading: Icon(
-                    isPreview ? Icons.visibility_outlined : Icons.lock_outline,
-                    color: isPreview ? AppColors.success : AppColors.muted,
+                    icon,
+                    color: canOpen ? AppColors.success : AppColors.muted,
                   ),
                   title: Text(lesson.title),
-                  subtitle: Text(
-                    isPreview ? 'Xem thử miễn phí' : 'Yêu cầu kích hoạt',
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pushNamed(
-                      AppRouter.lesson,
-                      arguments: LessonPageArgs(
-                        lessonId: lesson.id,
-                        title: lesson.title,
-                        courseName: detail.title,
-                      ),
-                    );
-                  },
+                  subtitle: Text(subtitle),
+                  trailing:
+                      isResumeTarget
+                          ? const Icon(
+                            Icons.flag_circle,
+                            color: AppColors.primary,
+                          )
+                          : null,
+                  onTap:
+                      canOpen
+                          ? () {
+                            Navigator.of(context).pushNamed(
+                              AppRouter.lesson,
+                              arguments: LessonPageArgs(
+                                lessonId: lesson.id,
+                                title: lesson.title,
+                                courseName: detail.title,
+                              ),
+                            );
+                          }
+                          : null,
                 );
               }).toList(),
         );
@@ -424,24 +551,29 @@ class _DetailActionBar extends StatelessWidget {
         case CourseUserState.addable:
           await session.addCourseToCart(detail.id);
           if (!context.mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Đã thêm vào giỏ hàng')));
+          showCustomSnackbar(
+            context: context,
+            message: 'Đã thêm vào giỏ hàng',
+            lottiePath: 'assets/lottie/success.json',
+            backgroundColor: Colors.green.shade50,
+            textColor: Colors.green.shade900,
+          );
           break;
         case CourseUserState.inCart:
           nav.select(HomeTab.cart);
-          break;
-        case CourseUserState.pendingActivation:
-          nav.select(HomeTab.account);
           break;
         case CourseUserState.activated:
           onOpenLesson();
           break;
       }
     } on ApiException catch (error) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showCustomSnackbar(
+        context: context,
+        message: error.message,
+        lottiePath: 'assets/lottie/error.json',
+        backgroundColor: Colors.red.shade50,
+        textColor: Colors.red.shade900,
+      );
     }
   }
 
@@ -451,8 +583,6 @@ class _DetailActionBar extends StatelessWidget {
         return 'Thêm vào giỏ hàng';
       case CourseUserState.inCart:
         return 'Đến giỏ hàng';
-      case CourseUserState.pendingActivation:
-        return 'Kích hoạt ngay';
       case CourseUserState.activated:
         return 'Vào học ngay';
     }

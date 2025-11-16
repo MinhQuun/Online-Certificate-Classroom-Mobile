@@ -11,6 +11,7 @@ class EnrolledController extends ChangeNotifier {
   final EnrolledRepository _repository;
 
   bool isLoading = false;
+  bool hasLoaded = false;
   String? errorMessage;
   List<EnrolledCourse> courses = const [];
   EnrolledSummary summary = const EnrolledSummary(
@@ -34,6 +35,7 @@ class EnrolledController extends ChangeNotifier {
       courses = response.courses;
       summary = response.summary;
       activeFilter = response.filter;
+      hasLoaded = true;
     } catch (error) {
       errorMessage = 'Không thể tải danh sách khóa học của bạn';
     } finally {

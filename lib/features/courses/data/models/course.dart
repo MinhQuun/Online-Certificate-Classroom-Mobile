@@ -1,4 +1,4 @@
-enum CourseUserState { addable, inCart, pendingActivation, activated }
+enum CourseUserState { addable, inCart, activated }
 
 class CourseSummary {
   const CourseSummary({

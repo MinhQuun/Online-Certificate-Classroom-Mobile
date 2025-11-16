@@ -3,10 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import 'package:cert_classroom_mobile/core/config/app_config.dart';
-import 'package:cert_classroom_mobile/core/network/api_exceptions.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
 import 'package:cert_classroom_mobile/core/utils/validators.dart';
-import 'package:cert_classroom_mobile/features/activation/data/activation_repository.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:cert_classroom_mobile/features/profile/data/models/profile.dart';
 import 'package:cert_classroom_mobile/features/profile/data/models/progress_overview.dart';
@@ -34,13 +32,10 @@ class _ProfilePageState extends State<ProfilePage> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _activationCodeController = TextEditingController();
-  final ActivationRepository _activationRepository = ActivationRepository();
   DateTime? _selectedDob;
   bool _didPopulate = false;
   bool _isEditingProfile = false;
   bool _showPasswordFields = false;
-  bool _isSubmittingActivation = false;
 
   @override
   void dispose() {
@@ -50,7 +45,6 @@ class _ProfilePageState extends State<ProfilePage> {
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
-    _activationCodeController.dispose();
     super.dispose();
   }
 
@@ -66,50 +60,6 @@ class _ProfilePageState extends State<ProfilePage> {
       textColor: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
     );
   }
-
-  Future<void> _submitActivationCode() async {
-    final code = _activationCodeController.text.trim();
-    if (code.isEmpty) {
-      showCustomSnackbar(
-        context: context,
-        message: 'Vui lòng nhập mã kích hoạt hợp lệ',
-        lottiePath: 'assets/lottie/error.json',
-        backgroundColor: Colors.red.shade50,
-        textColor: Colors.red.shade900,
-      );
-      return;
-    }
-    setState(() => _isSubmittingActivation = true);
-    final session = context.read<StudentSessionController>();
-    try {
-      final result = await _activationRepository.activate(code);
-      if (!mounted) return;
-      _activationCodeController.clear();
-      await session.refreshEnrollments(force: true);
-      await session.refreshCart(force: true);
-      if (!mounted) return;
-      showCustomSnackbar(
-        context: context,
-        message: 'Đã kích hoạt khóa học ${result.courseName}',
-        lottiePath: 'assets/lottie/success.json',
-        backgroundColor: Colors.green.shade50,
-        textColor: Colors.green.shade900,
-      );
-    } on ApiException catch (error) {
-      showCustomSnackbar(
-        context: context,
-        message: error.message,
-        lottiePath: 'assets/lottie/error.json',
-        backgroundColor: Colors.red.shade50,
-        textColor: Colors.red.shade900,
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isSubmittingActivation = false);
-      }
-    }
-  }
-
   Future<void> _handleLogout() async {
     try {
       final auth = context.read<AuthController>();
@@ -178,20 +128,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     errorMessage: controller.progressError,
                   ),
                   const SizedBox(height: 20),
-
-                  _SectionCard(
-                    title: 'Mã kích hoạt',
-                    subtitle: 'Nhập mã để mở khóa khóa học đã mua',
-                    child: _ActivationCard(
-                      controller: _activationCodeController,
-                      isSubmitting: _isSubmittingActivation,
-                      onSubmit: _submitActivationCode,
-                      onPortalTap:
-                          () => _openPortal('student/activation-codes'),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
 
                   _SectionCard(
                     title: 'Lịch sử đơn hàng',
@@ -445,8 +381,12 @@ class _ProfilePageState extends State<ProfilePage> {
         _showPasswordFields = false;
       });
       controller.loadProfile(refresh: true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cập nhật hồ sơ thành công')),
+      showCustomSnackbar(
+        context: context,
+        message: 'Cập nhật hồ sơ thành công',
+        lottiePath: 'assets/lottie/success.json',
+        backgroundColor: Colors.green.shade50,
+        textColor: Colors.green.shade900,
       );
     }
   }
@@ -463,9 +403,13 @@ class _ProfilePageState extends State<ProfilePage> {
     final url = AppConfig.portalUri(path).toString();
     final launched = await launchUrlString(url);
     if (!launched && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Không thể mở $url')));
+      showCustomSnackbar(
+        context: context,
+        message: 'Không thể mở $url',
+        lottiePath: 'assets/lottie/error.json',
+        backgroundColor: Colors.red.shade50,
+        textColor: Colors.red.shade900,
+      );
     }
   }
 
@@ -768,46 +712,6 @@ class _PortalTile extends StatelessWidget {
   }
 }
 
-class _ActivationCard extends StatelessWidget {
-  const _ActivationCard({
-    required this.controller,
-    required this.isSubmitting,
-    required this.onSubmit,
-    required this.onPortalTap,
-  });
-
-  final TextEditingController controller;
-  final bool isSubmitting;
-  final VoidCallback onSubmit;
-  final VoidCallback onPortalTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Nhập mã kích hoạt',
-            prefixIcon: Icon(Icons.qr_code),
-          ),
-        ),
-        const SizedBox(height: 12),
-        AppButton(
-          label: 'Kích hoạt khóa học',
-          isLoading: isSubmitting,
-          onPressed: isSubmitting ? null : onSubmit,
-        ),
-        TextButton.icon(
-          onPressed: onPortalTap,
-          icon: const Icon(Icons.open_in_new),
-          label: const Text('Xem hướng dẫn kích hoạt'),
-        ),
-      ],
-    );
-  }
-}
 
 class _LogoutCard extends StatelessWidget {
   const _LogoutCard({required this.onLogout});

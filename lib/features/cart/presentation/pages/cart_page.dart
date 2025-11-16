@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
+import 'package:cert_classroom_mobile/core/utils/custom_snackbar.dart';
 import 'package:cert_classroom_mobile/core/utils/formatters.dart';
 import 'package:cert_classroom_mobile/features/cart/data/models/cart_snapshot.dart';
 import 'package:cert_classroom_mobile/features/cart/data/models/checkout.dart';
@@ -407,9 +408,13 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      showCustomSnackbar(
+        context: context,
+        message: error.toString(),
+        lottiePath: 'assets/lottie/error.json',
+        backgroundColor: Colors.red.shade50,
+        textColor: Colors.red.shade900,
+      );
       Navigator.of(context).pop();
     }
   }
@@ -425,9 +430,13 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
       }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      showCustomSnackbar(
+        context: context,
+        message: error.toString(),
+        lottiePath: 'assets/lottie/error.json',
+        backgroundColor: Colors.red.shade50,
+        textColor: Colors.red.shade900,
+      );
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -678,13 +687,6 @@ void _showCheckoutSuccess(BuildContext context, CheckoutResult result) {
             ],
             const SizedBox(height: 8),
             Text('Tổng tiền: ${formatCurrency(result.total)}'),
-            if (result.pendingActivationCourses.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'Một số khóa học cần kích hoạt bằng mã đã gửi email.',
-                style: TextStyle(color: AppColors.warning),
-              ),
-            ],
           ],
         ),
         actions: [

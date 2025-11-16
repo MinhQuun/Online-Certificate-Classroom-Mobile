@@ -11,7 +11,6 @@ import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
 import 'package:cert_classroom_mobile/core/utils/validators.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:cert_classroom_mobile/shared/widgets/app_button.dart';
-import 'package:cert_classroom_mobile/shared/widgets/app_text_field.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -231,7 +230,7 @@ class _LoginPageState extends State<LoginPage> {
         // Cột register
         Expanded(
           child: Card(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(32),
             ),
@@ -241,8 +240,8 @@ class _LoginPageState extends State<LoginPage> {
                 border: Border.all(color: Colors.white24),
                 gradient: LinearGradient(
                   colors: [
-                    Colors.white.withOpacity(0.1),
-                    Colors.white.withOpacity(0.24),
+                    Colors.white.withValues(alpha: 0.1),
+                    Colors.white.withValues(alpha: 0.24),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -544,7 +543,7 @@ class _AuthInput extends StatelessWidget {
   Widget build(BuildContext context) {
     final textColor = inverted ? Colors.white : AppColors.text;
     final fillColor =
-        inverted ? Colors.white.withOpacity(0.12) : Colors.grey.shade100;
+        inverted ? Colors.white.withValues(alpha: 0.12) : Colors.grey.shade100;
 
     return TextFormField(
       controller: controller,
