@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 import 'package:lottie/lottie.dart';
 
 import 'package:cert_classroom_mobile/core/utils/custom_snackbar.dart';
 
-import 'package:cert_classroom_mobile/core/config/app_config.dart';
 import 'package:cert_classroom_mobile/core/routing/app_router.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
 import 'package:cert_classroom_mobile/core/utils/validators.dart';
@@ -71,17 +69,44 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _onRegister() async {
+  Future<void> _onRegister(AuthController controller) async {
     if (!_registerFormKey.currentState!.validate()) return;
 
-    final portalUrl =
-        '${AppConfig.portalBaseUri.toString()}/?open=register&source=app';
-    final launched = await launchUrlString(portalUrl);
+    final success = await controller.register(
+      fullName: _regNameController.text.trim(),
+      email: _regEmailController.text.trim(),
+      phone: _regPhoneController.text.trim(),
+      password: _regPasswordController.text,
+      passwordConfirmation: _regConfirmController.text,
+    );
 
-    if (!launched && mounted) {
-      _showSnack('Không thể mở trang đăng ký $portalUrl', isSuccess: false);
-    } else if (mounted) {
-      _showSnack('Vui lòng hoàn tất đăng ký trên cổng web.', isSuccess: true);
+    if (!mounted) return;
+
+    if (success) {
+      final email = _regEmailController.text.trim();
+      _registerFormKey.currentState?.reset();
+      _regNameController.clear();
+      _regEmailController.clear();
+      _regPhoneController.clear();
+      _regPasswordController.clear();
+      _regConfirmController.clear();
+
+      setState(() {
+        _panel = _AuthPanel.login;
+        if (email.isNotEmpty) {
+          _emailController.text = email;
+        }
+      });
+
+      _showSnack(
+        'Đăng ký thành công! Bạn có thể đăng nhập ngay.',
+        isSuccess: true,
+      );
+    } else {
+      _showSnack(
+        controller.errorMessage ?? 'Đăng ký thất bại, vui lòng thử lại.',
+        isSuccess: false,
+      );
     }
   }
 
@@ -381,7 +406,7 @@ class _RegisterPanel extends StatelessWidget {
   final TextEditingController phoneController;
   final TextEditingController passwordController;
   final TextEditingController confirmController;
-  final VoidCallback onSubmit;
+  final Future<void> Function(AuthController controller) onSubmit;
   final bool inverted;
   final bool isPasswordVisible;
   final bool isConfirmPasswordVisible;
@@ -398,120 +423,106 @@ class _RegisterPanel extends StatelessWidget {
       color: inverted ? Colors.white70 : AppColors.muted,
     );
 
-    return Form(
-      key: formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Chưa có tài khoản?', style: titleStyle),
-          const SizedBox(height: 8),
-          Text(
-            'Điền thông tin bên dưới, hệ thống sẽ mở cổng web để bạn hoàn tất đăng ký và kích hoạt tài khoản.',
-            style: bodyStyle,
-          ),
-          const SizedBox(height: 24),
-
-          // Họ tên
-          _AuthInput(
-            controller: nameController,
-            label: 'Họ và tên',
-            keyboardType: TextInputType.name,
-            validator:
-                (value) =>
-                    value == null || value.trim().isEmpty
-                        ? 'Vui lòng nhập họ tên'
-                        : null,
-            inverted: inverted,
-            lottiePath: 'assets/lottie/user.json',
-          ),
-          const SizedBox(height: 12),
-
-          // Email
-          _AuthInput(
-            controller: emailController,
-            label: 'Email',
-            keyboardType: TextInputType.emailAddress,
-            validator: Validators.email,
-            inverted: inverted,
-            lottiePath: 'assets/lottie/email.json',
-          ),
-          const SizedBox(height: 12),
-
-          // Số điện thoại
-          _AuthInput(
-            controller: phoneController,
-            label: 'Số điện thoại',
-            keyboardType: TextInputType.phone,
-            validator:
-                (value) =>
-                    value == null || value.length < 10
-                        ? 'Nhập số điện thoại hợp lệ'
-                        : null,
-            inverted: inverted,
-            lottiePath: 'assets/lottie/phone.json',
-          ),
-          const SizedBox(height: 12),
-
-          // Mật khẩu
-          _AuthInput(
-            controller: passwordController,
-            label: 'Mật khẩu',
-            obscureText: !isPasswordVisible,
-            validator: Validators.password,
-            inverted: inverted,
-            lottiePath: 'assets/lottie/password.json',
-            enableToggleObscure: true,
-            onToggleObscure: onTogglePasswordVisibility,
-          ),
-          const SizedBox(height: 12),
-
-          // Nhập lại mật khẩu
-          _AuthInput(
-            controller: confirmController,
-            label: 'Nhập lại mật khẩu',
-            obscureText: !isConfirmPasswordVisible,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Vui lòng xác nhận mật khẩu';
-              }
-              if (value != passwordController.text) {
-                return 'Mật khẩu không khớp';
-              }
-              return null;
-            },
-            inverted: inverted,
-            lottiePath: 'assets/lottie/confirm_password.json',
-            enableToggleObscure: true,
-            onToggleObscure: onToggleConfirmPasswordVisibility,
-          ),
-          const SizedBox(height: 24),
-
-          Text(
-            'Sau khi bấm đăng ký, hệ thống sẽ mở trang web để bạn hoàn tất thông tin.',
-            style: bodyStyle,
-          ),
-          const SizedBox(height: 16),
-
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: inverted ? Colors.white : AppColors.primary,
-                foregroundColor: inverted ? AppColors.primary : Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
+    return Consumer<AuthController>(
+      builder: (context, controller, _) {
+        return Form(
+          key: formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Chưa có tài khoản?', style: titleStyle),
+              const SizedBox(height: 8),
+              Text(
+                'Điền thông tin ngay bên dưới để hệ thống tạo tài khoản trực tiếp trên ứng dụng.',
+                style: bodyStyle,
               ),
-              onPressed: onSubmit,
-              child: const Text('Mở trang đăng ký'),
-            ),
+              const SizedBox(height: 24),
+
+              // Họ tên
+              _AuthInput(
+                controller: nameController,
+                label: 'Họ và tên',
+                keyboardType: TextInputType.name,
+                validator:
+                    (value) =>
+                        value == null || value.trim().isEmpty
+                            ? 'Vui lòng nhập họ tên'
+                            : null,
+                inverted: inverted,
+                lottiePath: 'assets/lottie/user.json',
+              ),
+              const SizedBox(height: 12),
+
+              // Email
+              _AuthInput(
+                controller: emailController,
+                label: 'Email',
+                keyboardType: TextInputType.emailAddress,
+                validator: Validators.email,
+                inverted: inverted,
+                lottiePath: 'assets/lottie/email.json',
+              ),
+              const SizedBox(height: 12),
+
+              // Số điện thoại
+              _AuthInput(
+                controller: phoneController,
+                label: 'Số điện thoại',
+                keyboardType: TextInputType.phone,
+                validator:
+                    (value) =>
+                        value == null || value.length < 10
+                            ? 'Nhập số điện thoại hợp lệ'
+                            : null,
+                inverted: inverted,
+                lottiePath: 'assets/lottie/phone.json',
+              ),
+              const SizedBox(height: 12),
+
+              // Mật khẩu
+              _AuthInput(
+                controller: passwordController,
+                label: 'Mật khẩu',
+                obscureText: !isPasswordVisible,
+                validator: Validators.password,
+                inverted: inverted,
+                lottiePath: 'assets/lottie/password.json',
+                enableToggleObscure: true,
+                onToggleObscure: onTogglePasswordVisibility,
+              ),
+              const SizedBox(height: 12),
+
+              // Nhập lại mật khẩu
+              _AuthInput(
+                controller: confirmController,
+                label: 'Nhập lại mật khẩu',
+                obscureText: !isConfirmPasswordVisible,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Vui lòng xác nhận mật khẩu';
+                  }
+                  if (value != passwordController.text) {
+                    return 'Mật khẩu không khớp';
+                  }
+                  return null;
+                },
+                inverted: inverted,
+                lottiePath: 'assets/lottie/confirm_password.json',
+                enableToggleObscure: true,
+                onToggleObscure: onToggleConfirmPasswordVisibility,
+              ),
+              const SizedBox(height: 24),
+
+              AppButton(
+                label: 'Đăng ký',
+                isLoading: controller.isLoading,
+                onPressed:
+                    controller.isLoading ? null : () => onSubmit(controller),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

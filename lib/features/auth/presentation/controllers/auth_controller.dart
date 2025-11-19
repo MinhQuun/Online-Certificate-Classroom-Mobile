@@ -81,6 +81,35 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<bool> register({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    _setLoading(true);
+    _errorMessage = null;
+    try {
+      await _repository.register(
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        password: password,
+        passwordConfirmation: passwordConfirmation,
+      );
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Đăng ký thất bại, vui lòng thử lại.';
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> logout() async {
     _setLoading(true);
     _errorMessage = null;

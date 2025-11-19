@@ -22,6 +22,26 @@ class AuthApi {
     return _extractData(response);
   }
 
+  Future<Map<String, dynamic>> register({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    final response = await _client.post(
+      '/student/register',
+      body: {
+        'name': fullName,
+        'email': email,
+        'phone': phone,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      },
+    );
+    return _extractData(response);
+  }
+
   Future<void> logout() async {
     final response = await _client.post('/student/logout');
     _ensureSuccess(response);

@@ -41,6 +41,22 @@ class AuthRepository {
     return AuthUser.fromJson(userJson);
   }
 
+  Future<void> register({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    await _api.register(
+      fullName: fullName,
+      email: email,
+      phone: phone,
+      password: password,
+      passwordConfirmation: passwordConfirmation,
+    );
+  }
+
   Future<void> logout() async {
     try {
       await _api.logout();
