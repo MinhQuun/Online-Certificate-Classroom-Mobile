@@ -62,13 +62,17 @@ class _LessonContent extends StatelessWidget {
         if (controller.isLoading && detail == null) {
           return _LessonScaffold(
             title: courseName,
-            child: const LoadingIndicator(message: 'Đang tải bài học...'),
+            onRefresh: () => _refreshLesson(context, controller),
+            child: const Center(
+              child: LoadingIndicator(message: 'Đang tải bài học...'),
+            ),
           );
         }
 
         if (controller.errorMessage != null && detail == null) {
           return _LessonScaffold(
             title: courseName,
+            onRefresh: () => _refreshLesson(context, controller),
             child: ErrorView(
               title: 'Không thể tải bài học',
               message: controller.errorMessage,
@@ -79,7 +83,11 @@ class _LessonContent extends StatelessWidget {
 
         return _LessonScaffold(
           title: courseName,
+          onRefresh: () => _refreshLesson(context, controller),
           child: ListView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
             children: [
               _LessonVideoPlayer(detail: detail, title: title),
@@ -187,24 +195,60 @@ class _LessonContent extends StatelessWidget {
     if (url.isEmpty) return;
     await launchUrlString(url);
   }
+
+  Future<void> _refreshLesson(
+    BuildContext context,
+    LessonController controller,
+  ) async {
+    await Future.wait([
+      controller.loadLesson(refresh: true),
+      context.read<StudentSessionController>().refreshAll(force: true),
+    ]);
+  }
 }
 
 class _LessonScaffold extends StatelessWidget {
-  const _LessonScaffold({required this.title, required this.child});
+  const _LessonScaffold({
+    required this.title,
+    required this.child,
+    this.onRefresh,
+  });
 
   final String title;
   final Widget child;
+  final Future<void> Function()? onRefresh;
 
   @override
   Widget build(BuildContext context) {
+    final content =
+        onRefresh == null
+            ? child
+            : RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: onRefresh!,
+              child: _ensureScrollable(child),
+            );
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         bottom: false,
         child: Column(
-          children: [_LessonHeader(title: title), Expanded(child: child)],
+          children: [_LessonHeader(title: title), Expanded(child: content)],
         ),
       ),
+    );
+  }
+
+  Widget _ensureScrollable(Widget child) {
+    if (child is ScrollView) {
+      return child;
+    }
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+      child: Center(child: child),
     );
   }
 }

@@ -803,7 +803,7 @@ class _CourseCtaStyle {
         );
       case CourseUserState.activated:
         return _CourseCtaStyle(
-          label: 'Đang học',
+          label: 'Đã sở hữu',
           backgroundColor: const Color(0xFFE7F8F1),
           foregroundColor: AppColors.success,
         );

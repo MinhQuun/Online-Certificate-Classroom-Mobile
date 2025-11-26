@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher_string.dart';
-
-import 'package:cert_classroom_mobile/core/config/app_config.dart';
 import 'package:cert_classroom_mobile/core/theme/app_theme.dart';
 import 'package:cert_classroom_mobile/core/utils/validators.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/controllers/auth_controller.dart';
@@ -15,6 +12,7 @@ import 'package:cert_classroom_mobile/shared/widgets/loading_indicator.dart';
 
 import 'package:cert_classroom_mobile/core/utils/custom_snackbar.dart';
 import 'package:cert_classroom_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:cert_classroom_mobile/core/routing/app_router.dart';
 import 'package:cert_classroom_mobile/shared/controllers/student_session_controller.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -140,9 +138,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: Icons.receipt_long_outlined,
                         title: 'Theo dõi đơn hàng',
                         description:
-                            'Quản lý hóa đơn và tình trạng thanh toán nhanh chóng.',
-                        actionLabel: 'Xem đơn hàng',
-                        onTap: () => _openPortal('student/order-history'),
+                            'Quản lý hóa đơn và tình trạng thanh toán ngay trên app.',
+                        actionLabel: 'Xem trên app',
+                        onTap: () => Navigator.of(context).pushNamed(
+                          AppRouter.orders,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -404,19 +404,6 @@ class _ProfilePageState extends State<ProfilePage> {
     _didPopulate = true;
   }
 
-  Future<void> _openPortal(String path) async {
-    final url = AppConfig.portalUri(path).toString();
-    final launched = await launchUrlString(url);
-    if (!launched && mounted) {
-      showCustomSnackbar(
-        context: context,
-        message: 'Không thể mở $url',
-        lottiePath: 'assets/lottie/error.json',
-        backgroundColor: Colors.red.shade50,
-        textColor: Colors.red.shade900,
-      );
-    }
-  }
 }
 
 class _ProfileHeader extends StatelessWidget {

@@ -50,14 +50,18 @@ class _CourseDetailContent extends StatelessWidget {
         final ctaState = session.stateForCourse(data.id);
 
         if (controller.isLoading && detail == null) {
-          return const Scaffold(
-            body: LoadingIndicator(message: 'Đang tải khóa học...'),
+          return _buildRefreshablePlaceholder(
+            controller: controller,
+            session: session,
+            child: const LoadingIndicator(message: 'Đang tải khóa học...'),
           );
         }
 
         if (controller.errorMessage != null && detail == null) {
-          return Scaffold(
-            body: ErrorView(
+          return _buildRefreshablePlaceholder(
+            controller: controller,
+            session: session,
+            child: ErrorView(
               title: 'Không thể tải khóa học',
               message: controller.errorMessage,
               onRetry: () => controller.loadDetail(refresh: true),
@@ -70,45 +74,45 @@ class _CourseDetailContent extends StatelessWidget {
           backgroundColor: AppColors.background,
           body: SafeArea(
             bottom: false,
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _DetailHero(
-                    detail: data,
-                    onBack: () => Navigator.of(context).maybePop(),
-                  ),
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () => _refreshPage(controller, session),
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
                 ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _CourseInfo(detail: data),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                    child: _CourseProgressBanner(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _DetailHero(
                       detail: data,
-                      onContinue: () => _openPreferredLesson(context, data),
+                      onBack: () => Navigator.of(context).maybePop(),
                     ),
                   ),
-                ),
-                if (data.miniTests.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _CourseInfo(detail: data),
+                    ),
+                  ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                      child: _MiniTestsSection(tests: data.miniTests),
+                      child: _CourseProgressBanner(
+                        detail: data,
+                        onContinue: () => _openPreferredLesson(context, data),
+                      ),
                     ),
                   ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                  sliver: _ChaptersSection(
-                    detail: data,
-                    hasFullAccess: ctaState == CourseUserState.activated,
-                    resumeLessonId: resumeLessonId,
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                    sliver: _ChaptersSection(
+                      detail: data,
+                      hasFullAccess: ctaState == CourseUserState.activated,
+                      resumeLessonId: resumeLessonId,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           bottomNavigationBar: _DetailActionBar(
@@ -141,6 +145,47 @@ class _CourseDetailContent extends StatelessWidget {
         lessonId: target.id,
         title: target.title,
         courseName: detail.title,
+      ),
+    );
+  }
+
+  Future<void> _refreshPage(
+    CourseDetailController controller,
+    StudentSessionController session,
+  ) async {
+    await Future.wait([
+      controller.loadDetail(refresh: true),
+      session.refreshAll(force: true),
+    ]);
+  }
+
+  Widget _buildRefreshablePlaceholder({
+    required CourseDetailController controller,
+    required StudentSessionController session,
+    required Widget child,
+  }) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () => _refreshPage(controller, session),
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
+                  child: Center(child: child),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -240,11 +285,6 @@ class _CourseInfo extends StatelessWidget {
               ),
             if (detail.teacherName != null)
               _InfoPill(icon: Icons.person_outline, label: detail.teacherName!),
-            if (detail.durationDays != null && detail.durationDays! > 0)
-              _InfoPill(
-                icon: Icons.calendar_today_outlined,
-                label: '${detail.durationDays} ngày học',
-              ),
             if (detail.chapters.isNotEmpty)
               _InfoPill(
                 icon: Icons.menu_book_outlined,
@@ -297,38 +337,6 @@ class _CourseInfo extends StatelessWidget {
             ),
           ),
         ],
-      ],
-    );
-  }
-}
-
-class _MiniTestsSection extends StatelessWidget {
-  const _MiniTestsSection({required this.tests});
-
-  final List<CourseMiniTest> tests;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Mini test',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        ...tests.map(
-          (test) => ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.quiz_outlined),
-            title: Text(test.title),
-            subtitle: Text(
-              '${test.skill ?? 'Kỹ năng tổng hợp'} • ${test.timeLimit ?? 0} phút',
-            ),
-          ),
-        ),
       ],
     );
   }

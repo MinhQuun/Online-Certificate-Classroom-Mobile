@@ -5,6 +5,7 @@ import 'package:cert_classroom_mobile/features/auth/presentation/pages/splash_pa
 import 'package:cert_classroom_mobile/features/courses/presentation/pages/course_detail_page.dart';
 import 'package:cert_classroom_mobile/features/home/presentation/pages/home_page.dart';
 import 'package:cert_classroom_mobile/features/lessons/presentation/pages/lesson_page.dart';
+import 'package:cert_classroom_mobile/features/orders/presentation/pages/orders_page.dart';
 
 class AppRouter {
   static const String splash = '/splash';
@@ -12,6 +13,7 @@ class AppRouter {
   static const String home = '/home';
   static const String courseDetail = '/course_detail';
   static const String lesson = '/lesson';
+  static const String orders = '/orders';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -32,6 +34,8 @@ class AppRouter {
                 ? args
                 : LessonPageArgs(lessonId: 0, title: 'Bài học');
         return _build(settings, LessonPage(args: lessonArgs));
+      case orders:
+        return _build(settings, const OrdersPage());
       default:
         return _build(
           settings,
