@@ -70,7 +70,7 @@ class _CoursesPageState extends State<CoursesPage> {
           }
           if (controller.courses.isEmpty) {
             return _EmptyState(
-              onRetry: () => controller.loadCourses(refresh: true),
+              onRefresh: () => _onRefresh(controller, session),
             );
           }
 
@@ -819,40 +819,60 @@ class _CourseCtaStyle {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onRetry});
+  const _EmptyState({required this.onRefresh});
 
-  final VoidCallback onRetry;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.menu_book_rounded,
-              size: 64,
-              color: AppColors.primary,
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: onRefresh,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.menu_book_rounded,
+                        size: 64,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Chưa có khóa học',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Danh mục hiện tại chưa có nội dung. Vui lòng quay lại sau.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: () => onRefresh(),
+                        child: const Text('Thử tải lại'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Chưa có khóa học',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Danh mục hiện tại chưa có nội dung. Vui lòng quay lại sau.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Thử tải lại')),
           ],
         ),
       ),

@@ -79,7 +79,13 @@ class _EnrolledView extends StatelessWidget {
           );
         }
         if (controller.courses.isEmpty) {
-          return const _EnrolledEmptyState();
+          return _EnrolledEmptyState(
+            onRefresh:
+                () => controller.loadEnrolled(
+                  status: controller.activeFilter,
+                  refresh: true,
+                ),
+          );
         }
         return RefreshIndicator(
           onRefresh:
@@ -415,40 +421,56 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _EnrolledEmptyState extends StatelessWidget {
-  const _EnrolledEmptyState();
+  const _EnrolledEmptyState({required this.onRefresh});
+
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.school_outlined,
-                size: 64,
-                color: AppColors.primary,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Bạn chưa đăng ký khóa học nào',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Khám phá thư viện khóa học để bắt đầu hành trình học tập.',
-                textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
-              ),
-            ],
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: onRefresh,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
           ),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.school_outlined,
+                        size: 64,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Bạn chưa đăng ký khóa học nào',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Khám phá thư viện khóa học để bắt đầu hành trình học tập.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

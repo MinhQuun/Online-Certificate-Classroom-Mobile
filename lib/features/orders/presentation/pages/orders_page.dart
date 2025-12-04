@@ -28,7 +28,9 @@ class _OrdersView extends StatelessWidget {
     return Consumer<OrdersController>(
       builder: (context, controller, _) {
         if (controller.isLoading && controller.orders.isEmpty) {
-          return const LoadingIndicator(message: 'Đang tải lịch sử đơn hàng...');
+          return const LoadingIndicator(
+            message: 'Đang tải lịch sử đơn hàng...',
+          );
         }
 
         if (controller.errorMessage != null && controller.orders.isEmpty) {
@@ -42,34 +44,40 @@ class _OrdersView extends StatelessWidget {
         if (controller.orders.isEmpty) {
           return Scaffold(
             backgroundColor: AppColors.background,
-            body: RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: () => controller.loadOrders(refresh: true),
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
-                slivers: const [
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 32),
-                        child: Text(
-                          'Chưa có đơn hàng nào. Hãy đặt khóa học để xem lại lịch sử tại đây.',
-                          textAlign: TextAlign.center,
+            body: SafeArea(
+              bottom: false,
+              child: RefreshIndicator(
+                color: AppColors.primary,
+                onRefresh: () => controller.loadOrders(refresh: true),
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  slivers: const [
+                    SliverToBoxAdapter(child: _OrdersHeader()),
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            'Chưa có đơn hàng nào. Hãy đặt khóa học để xem lại lịch sử tại đây.',
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
         }
 
         final paidTotal = controller.orders
-            .where((order) => _statusMeta(order.status).tone == _OrderTone.success)
+            .where(
+              (order) => _statusMeta(order.status).tone == _OrderTone.success,
+            )
             .fold<int>(0, (sum, order) => sum + order.total);
 
         return Scaffold(
@@ -84,27 +92,7 @@ class _OrdersView extends StatelessWidget {
                   parent: AlwaysScrollableScrollPhysics(),
                 ),
                 slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(Icons.arrow_back),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Lịch sử đơn hàng',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  const SliverToBoxAdapter(child: _OrdersHeader()),
                   SliverToBoxAdapter(
                     child: _OrdersHero(
                       totalOrders: controller.orders.length,
@@ -114,8 +102,11 @@ class _OrdersView extends StatelessWidget {
                   SliverToBoxAdapter(
                     child: _StatusFilters(
                       active: controller.activeFilter,
-                      onChanged: (filter) =>
-                          controller.loadOrders(status: filter, refresh: true),
+                      onChanged:
+                          (filter) => controller.loadOrders(
+                            status: filter,
+                            refresh: true,
+                          ),
                     ),
                   ),
                   if (controller.isLoading)
@@ -157,6 +148,10 @@ class _OrdersView extends StatelessWidget {
       ),
       builder: (context) {
         final meta = _statusMeta(order.status);
+        final paymentLabel = _friendlyPayment(order.paymentMethod);
+        final invoiceLabel = order.invoiceId ?? order.code;
+        final dateLabel =
+            formatDateLabel(order.createdAt?.toIso8601String()) ?? '--';
         return Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -185,43 +180,40 @@ class _OrdersView extends StatelessWidget {
                       const Spacer(),
                       Text(
                         order.code,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Tổng thanh toán',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppColors.muted),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     formatCurrency(order.total),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   _MetaRow(
                     label: 'Thanh toán',
-                    value: order.paymentMethod?.toUpperCase() ?? 'Chưa rõ',
+                    value: paymentLabel,
                     icon: Icons.payments_outlined,
                   ),
                   _MetaRow(
                     label: 'Ngày đặt',
-                    value: formatDateLabel(order.createdAt?.toIso8601String()) ??
-                        '--',
+                    value: dateLabel,
                     icon: Icons.event,
                   ),
                   _MetaRow(
                     label: 'Mã hóa đơn',
-                    value: order.invoiceId ?? order.code,
+                    value: invoiceLabel,
                     icon: Icons.receipt_long_outlined,
                   ),
                   if (order.note != null && order.note!.isNotEmpty) ...[
@@ -233,23 +225,28 @@ class _OrdersView extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       order.note!,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: AppColors.muted),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
                     ),
                   ],
                   const SizedBox(height: 16),
                   Text(
                     'Sản phẩm',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  ...order.items.map(
-                    (item) => _OrderItemTile(item: item),
-                  ),
+                  if (order.items.isEmpty)
+                    Text(
+                      'Chưa có sản phẩm trong đơn này.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+                    )
+                  else
+                    ...order.items.map((item) => _OrderItemTile(item: item)),
                 ],
               ),
             ),
@@ -260,11 +257,33 @@ class _OrdersView extends StatelessWidget {
   }
 }
 
+class _OrdersHeader extends StatelessWidget {
+  const _OrdersHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Lịch sử đơn hàng',
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _OrdersHero extends StatelessWidget {
-  const _OrdersHero({
-    required this.totalOrders,
-    required this.paidTotal,
-  });
+  const _OrdersHero({required this.totalOrders, required this.paidTotal});
 
   final int totalOrders;
   final int paidTotal;
@@ -284,25 +303,27 @@ class _OrdersHero extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.receipt_long_outlined,
-                    color: Colors.white, size: 26),
+                const Icon(
+                  Icons.receipt_long_outlined,
+                  color: Colors.white,
+                  size: 26,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Lịch sử đơn hàng',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
               'Theo dõi các đơn đã mua, tải mã hóa đơn và kiểm tra trạng thái thanh toán.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.white70),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
             ),
             const SizedBox(height: 16),
             Row(
@@ -347,18 +368,19 @@ class _StatusFilters extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Row(
-        children: filters
-            .map(
-              (filter) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(filter.$2),
-                  selected: active == filter.$1,
-                  onSelected: (_) => onChanged(filter.$1),
-                ),
-              ),
-            )
-            .toList(),
+        children:
+            filters
+                .map(
+                  (filter) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(filter.$2),
+                      selected: active == filter.$1,
+                      onSelected: (_) => onChanged(filter.$1),
+                    ),
+                  ),
+                )
+                .toList(),
       ),
     );
   }
@@ -400,37 +422,36 @@ class _OrderCard extends StatelessWidget {
                 Text(
                   order.code,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
               dateLabel,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppColors.muted),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: order.items
-                  .take(3)
-                  .map((item) => _ItemPill(item: item))
-                  .toList(),
+              children:
+                  order.items
+                      .take(3)
+                      .map((item) => _ItemPill(item: item))
+                      .toList(),
             ),
             if (order.items.length > 3)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
                   '+${order.items.length - 3} sản phẩm khác',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppColors.muted),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
                 ),
               ),
             const SizedBox(height: 12),
@@ -439,15 +460,17 @@ class _OrderCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Tổng tiền',
-                        style: TextStyle(color: AppColors.muted)),
+                    const Text(
+                      'Tổng tiền',
+                      style: TextStyle(color: AppColors.muted),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       formatCurrency(order.total),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ],
                 ),
@@ -489,16 +512,18 @@ class _ItemPill extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              image: item.coverImage == null
-                  ? null
-                  : DecorationImage(
-                      image: NetworkImage(item.coverImage!),
-                      fit: BoxFit.cover,
-                    ),
+              image:
+                  item.coverImage == null
+                      ? null
+                      : DecorationImage(
+                        image: NetworkImage(item.coverImage!),
+                        fit: BoxFit.cover,
+                      ),
             ),
-            child: item.coverImage == null
-                ? const Icon(Icons.menu_book_outlined, size: 18)
-                : null,
+            child:
+                item.coverImage == null
+                    ? const Icon(Icons.menu_book_outlined, size: 18)
+                    : null,
           ),
           const SizedBox(width: 8),
           Column(
@@ -507,19 +532,17 @@ class _ItemPill extends StatelessWidget {
             children: [
               Text(
                 item.title,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
                 '$typeLabel · ${formatCurrency(item.price)}',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.muted),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
               ),
             ],
           ),
@@ -540,25 +563,27 @@ class _OrderItemTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: item.coverImage == null
-            ? Container(
-                width: 48,
-                height: 48,
-                color: AppColors.primarySoft.withValues(alpha: 0.18),
-                child: const Icon(Icons.menu_book_outlined),
-              )
-            : Image.network(
-                item.coverImage!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-              ),
+        child:
+            item.coverImage == null
+                ? Container(
+                  width: 48,
+                  height: 48,
+                  color: AppColors.primarySoft.withValues(alpha: 0.18),
+                  child: const Icon(Icons.menu_book_outlined),
+                )
+                : Image.network(
+                  item.coverImage!,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                ),
       ),
       title: Text(item.title),
       subtitle: Text(
         '${item.type.toUpperCase()} · x${item.quantity}',
-        style:
-            Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
       ),
       trailing: Text(formatCurrency(item.price)),
     );
@@ -585,10 +610,7 @@ class _StatusChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             meta.label,
-            style: TextStyle(
-              color: meta.color,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: meta.color, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -624,12 +646,15 @@ class _HeroStat extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      value,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Text(
@@ -673,16 +698,15 @@ class _MetaRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppColors.muted),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
                 ),
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -709,6 +733,17 @@ class _StatusMeta {
   final Color background;
   final IconData icon;
   final _OrderTone tone;
+}
+
+String _friendlyPayment(String? raw) {
+  if (raw == null || raw.isEmpty) return 'Chưa rõ';
+  final value = raw.toLowerCase();
+  if (value.contains('qr')) return 'QR Pay';
+  if (value.contains('visa') || value.contains('master'))
+    return 'Thẻ VISA/Master';
+  if (value.contains('bank')) return 'Chuyển khoản ngân hàng';
+  if (value.contains('vnpay')) return 'VNPay';
+  return raw.toUpperCase();
 }
 
 _StatusMeta _statusMeta(String status) {
