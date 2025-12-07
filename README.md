@@ -2,7 +2,7 @@
 
 # Online Certificate Classroom (Mobile)
 
-Flutter client for the "Xay dung he thong quan ly lop hoc chung chi truc tuyen" project. Shares the same Laravel/MySQL backend with the web app: [Online-Certificate-Classroom-Web](https://github.com/MinhQuun/Online-Certificate-Classroom-Web).
+Flutter client for the "Xây dựng hệ thống quản lý lớp học chứng chỉ trực tuyến" project. Shares the same Laravel/MySQL backend with the web app: [Online-Certificate-Classroom-Web](https://github.com/MinhQuun/Online-Certificate-Classroom-Web).
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.7%2B-blue)
 ![Dart](https://img.shields.io/badge/Dart-3.7%2B-blueviolet)
